@@ -1,19 +1,30 @@
-function plotxppaut2(filename,options)
-% Plot two parameter bifurcation diagrams using the new XPP8.0 write points
-% format. Column 6 contains an indicator of the type of bifurcation point,
-% so we can use that to assign linespecs.
-
-% Need to discover the ID code:
-% torus, bifurcations
+function h=plotxppaut2(filename,options)
+% plotxppaut2 Plot two-parameter bifurcation diagrams generated in XPPAUT.
+% Generate the data file data file using XPPAUT's Auto/File/write points
+% option.
 %
-% MORE INTUITIVE: for each type of branch, set linespec - e.g. 'SNP','-ro'
+%   plotxppaut2(filename) - plot contents of filename
+%   plotxppaut2(filename,options) - plot with line properties defined in
+%   the options struct, which can be generated and modified using plotxppautset2
+%
+% See also  plotxppautset2 plotxppaut1 plotxppautset1 plotnullclines
 
+% (c) Patrick Fletcher 2015-now
+% Inspired by PlotXppaut by Mohammad S. Imtiaz
+%
+% 07/08/2016: Support XPP8.0's 6 column format. The extra column is to
+% specify two-parameter bifurcation type.
+%
+% columns: V>=8.0 {par, ymin, ymax, type, branch, 2-par type};
+% V<8.0 {par, ymin, ymax, type, branch}
 
-nSubSample=options.nSubSample;
+%TODO: confirm point types
+%TODO: MORE INTUITIVE options struct, for each type of branch, set linespec - e.g. 'SNP','-ro'
 
 if ~exist('options','var')
     options=plotxppautset2();
 end
+nSubSample=options.nSubSample;
 
 %Colors -- SHOULD BE VALID MATLAB COLORS
 C=options.Color;
@@ -36,6 +47,8 @@ Mfc=options.MarkerFaceColor;
 
 fid = fopen(filename,'rt');
 
+h=[];
+
 if(fid~=-1)
     
     %determine if old or new format
@@ -50,8 +63,6 @@ if(fid~=-1)
     
     
     temp=st';
-    
-    temp1=zeros(size(temp,1),7)*NaN;
     
     type1=temp(:,6)==1;
     type2=temp(:,6)==2;
@@ -70,13 +81,13 @@ if(fid~=-1)
     type7ix=find(type7);
     
     %subsample
-    %   type1ix=type1ix(1:nSubSample(1):end);
-    %   type2ix=type2ix(1:nSubSample(2):end);
-    %   type3ix=type3ix(1:nSubSample(3):end);
-    %   type4ix=type4ix(1:nSubSample(4):end);
-    %   type5ix=type5ix(1:nSubSample(5):end);
-    %   type6ix=type6ix(1:nSubSample(6):end);
-    %   type7ix=type7ix(1:nSubSample(7):end);
+    type1ix=type1ix(1:nSubSample(1):end);
+    type2ix=type2ix(1:nSubSample(2):end);
+    type3ix=type3ix(1:nSubSample(3):end);
+    type4ix=type4ix(1:nSubSample(4):end);
+    type5ix=type5ix(1:nSubSample(5):end);
+    type6ix=type6ix(1:nSubSample(6):end);
+    type7ix=type7ix(1:nSubSample(7):end);
     
     x(type1ix,1)=temp(type1ix,1);
     x(type2ix,2)=temp(type2ix,1);
@@ -96,24 +107,24 @@ if(fid~=-1)
     
     
     
-    % $$$ figure;
+    %%% Now plot
     %	-----------------------------------------
-    h_one = line(x(:,1),y(:,1));
-    set(h_one,'color',C.SN)
-    set(h_one,'linestyle',Lt.SN)
-    set(h_one,'linewidth',Lw.SN)
-    set(h_one,'Marker',M.SN)
-    set(h_one,'Markersize',Ms.SN)
-    set(h_one,'MarkerFacecolor',Mfc.SN)
+    h.one = line(x(:,1),y(:,1));
+    set(h.one,'color',C.SN)
+    set(h.one,'linestyle',Lt.SN)
+    set(h.one,'linewidth',Lw.SN)
+    set(h.one,'Marker',M.SN)
+    set(h.one,'Markersize',Ms.SN)
+    set(h.one,'MarkerFacecolor',Mfc.SN)
     
     %	-----------------------------------------
-    h_two = line(x(:,2),y(:,2));
-    set(h_two,'color',C.SNP)
-    set(h_two,'linestyle',Lt.SNP)
-    set(h_two,'linewidth',Lw.SNP)
-    set(h_two,'Marker',M.SNP)
-    set(h_two,'Markersize',Ms.SNP)
-    set(h_two,'MarkerFacecolor',Mfc.SNP)
+    h.two = line(x(:,2),y(:,2));
+    set(h.two,'color',C.SNP)
+    set(h.two,'linestyle',Lt.SNP)
+    set(h.two,'linewidth',Lw.SNP)
+    set(h.two,'Marker',M.SNP)
+    set(h.two,'Markersize',Ms.SNP)
+    set(h.two,'MarkerFacecolor',Mfc.SNP)
     
     %	-----------------------------------------
     h_three = line(x(:,3),y(:,3));
@@ -125,48 +136,43 @@ if(fid~=-1)
     set(h_three,'MarkerFacecolor',Mfc.HB)
     
     %	-----------------------------------------
-    h_four = line(x(:,4),y(:,4));
-    set(h_four,'color',C.uk1)
-    set(h_four,'linestyle',Lt.uk1)
-    set(h_four,'linewidth',Lw.uk1)
-    set(h_four,'Marker',M.uk1)
-    set(h_four,'Markersize',Ms.uk1)
-    set(h_four,'MarkerFacecolor',Mfc.uk1)
+    h.four = line(x(:,4),y(:,4));
+    set(h.four,'color',C.uk1)
+    set(h.four,'linestyle',Lt.uk1)
+    set(h.four,'linewidth',Lw.uk1)
+    set(h.four,'Marker',M.uk1)
+    set(h.four,'Markersize',Ms.uk1)
+    set(h.four,'MarkerFacecolor',Mfc.uk1)
     
     %	-----------------------------------------
-    h_five = line(x(:,5),y(:,5));
-    set(h_five,'color',C.uk2)
-    set(h_five,'linestyle',Lt.uk2)
-    set(h_five,'linewidth',Lw.uk2)
-    set(h_five,'Marker',M.uk2)
-    set(h_five,'Markersize',Ms.uk2)
-    set(h_five,'MarkerFacecolor',Mfc.uk2)
+    h.five = line(x(:,5),y(:,5));
+    set(h.five,'color',C.uk2)
+    set(h.five,'linestyle',Lt.uk2)
+    set(h.five,'linewidth',Lw.uk2)
+    set(h.five,'Marker',M.uk2)
+    set(h.five,'Markersize',Ms.uk2)
+    set(h.five,'MarkerFacecolor',Mfc.uk2)
     
     %	-----------------------------------------
-    h_six = line(x(:,6),y(:,6));
-    set(h_six,'color',C.uk3)
-    set(h_six,'linestyle',Lt.uk3)
-    set(h_six,'linewidth',Lw.uk3)
-    set(h_six,'Marker',M.uk3)
-    set(h_six,'Markersize',Ms.uk3)
-    set(h_six,'MarkerFacecolor',Mfc.uk3)
+    h.six = line(x(:,6),y(:,6));
+    set(h.six,'color',C.uk3)
+    set(h.six,'linestyle',Lt.uk3)
+    set(h.six,'linewidth',Lw.uk3)
+    set(h.six,'Marker',M.uk3)
+    set(h.six,'Markersize',Ms.uk3)
+    set(h.six,'MarkerFacecolor',Mfc.uk3)
     
     %	-----------------------------------------
-    h_seven = line(x(:,7),y(:,7));
-    set(h_seven,'color',C.FP)
-    set(h_seven,'linestyle',Lt.FP)
-    set(h_seven,'linewidth',Lw.FP)
-    set(h_seven,'Marker',M.FP)
-    set(h_seven,'Markersize',Ms.FP)
-    set(h_seven,'MarkerFacecolor',Mfc.FP)
+    h.seven = line(x(:,7),y(:,7));
+    set(h.seven,'color',C.FP)
+    set(h.seven,'linestyle',Lt.FP)
+    set(h.seven,'linewidth',Lw.FP)
+    set(h.seven,'Marker',M.FP)
+    set(h.seven,'Markersize',Ms.FP)
+    set(h.seven,'MarkerFacecolor',Mfc.FP)
     
     %	-----------------------------------------
     
-    %   grid on;
-    %   axis tight
-    %   xlabel('Bifurcation parameter')
-    %   ylabel('Variable')
-    %   title(file_name);
 else
     error(['Could not open file: ' filename ])
 end

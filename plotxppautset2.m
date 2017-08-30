@@ -1,11 +1,22 @@
 function options=plotxppautset2(varargin)
+% PLOTXPPAUTSET2 Create or update an option structure to specify the line properties of each
+% type of solution branch in a 1-parameter bifurcation diagram to be
+% plotted by plotxppaut2. Defaults are set to mimic XPPAUT appearance.
+%
+%    optionStruct=PLOTXPPAUTSET2('Name','Value')
+%
+% Where 'Name' and 'Value' are line properties: type plotxppautset2 for
+% defaults.
+%
+% See also  plotxppaut2 plotxppaut1 plotxppautset1 plotnullclines
 
 % index of type of curve:
 % 1-LP, 2-SNP, 3-HB, 4-TR?, 5-BR, 6-PD, 7-UZ/FP?
 
 % Print out possible values of properties.
 if (nargin == 0) && (nargout == 0)
-    fprintf('Seven entries per option correspond to: Saddle node, Saddle node of Periodics, Hopf, ?, Branch Point, Period Doubling, Fixed period \n');
+    fprintf('Seven entries per option correspond to: \n');
+    fprintf('Saddle node, Saddle node of Periodics, Hopf, Torus point, Branch point, Period doubling, Fixed period \n');
     fprintf('           Color: [ {''k'',''k'',''r'',''b'',''k'',''r'',''b''} ]\n');
     fprintf('       LineStyle: [ {''-'',''-'',''none'',''none'',''-'',''none'',''none''} ]\n');
     fprintf('       Linewidth: [ {1, 1, 1, 1, 1, 1, 1} ]\n');
@@ -94,7 +105,7 @@ options.nSubSample=[1,1,1,1,1,1,1];
 % A finite state machine to parse name-value pairs.
 i=1;
 if rem(nargin-i+1,2) ~= 0
-    error(message('MATLAB:plotxppautset:ArgNameValueMismatch'));
+    error(message('plotxppautset2:ArgNameValueMismatch'));
 end
 expectval = 0;                          % start expecting a name, not a value
 while i <= nargin
@@ -102,13 +113,13 @@ while i <= nargin
     
     if ~expectval
         if ~ischar(arg)
-            error(message('MATLAB:plotxppautset:NoPropName', i));
+            error(message('plotxppautset2:NoPropName', i));
         end
         
         lowArg = lower(arg);
         j = strmatch(lowArg,names);
         if isempty(j)                       % if no matches
-            error(message('MATLAB:plotxppautset:InvalidPropName', arg));
+            error(message('plotxppautset2:InvalidPropName', arg));
         elseif length(j) > 1                % if more than one match
             % Check for any exact matches (in case any names are subsets of others)
             k = strmatch(lowArg,names,'exact');
@@ -119,7 +130,7 @@ while i <= nargin
                 for k = j(2:length(j))'
                     matches = [matches ', ' deblank(Names(k,:))]; %#ok<AGROW>
                 end
-                error(message('MATLAB:plotxppautset:AmbiguousPropName',arg,matches));
+                error(message('plotxppautset2:AmbiguousPropName',arg,matches));
             end
         end
         expectval = 1;                      % we expect a value next
@@ -143,6 +154,6 @@ while i <= nargin
 end
 
 if expectval
-    error(message('MATLAB:plotxppautset:NoValueForProp', arg));
+    error(message('plotxppautset2:NoValueForProp', arg));
 end
 

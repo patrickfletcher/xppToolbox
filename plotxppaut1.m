@@ -1,24 +1,26 @@
-function plotxppaut1(filename,options)
-% (c) Patrick Fletcher 2015
-% Based on PlotXppaut by Mohammad S. Imtiaz
+function h=plotxppaut1(filename,options)
+% plotxppaut2 Plot one-parameter bifurcation diagrams generated in XPPAUT.
+% Generate the data file data file using XPPAUT's Auto/File/write points
+% option.
 %
-% A function to plot one-parameter bifurcation diagrams from XPPAUT.
-% Provides ability to set options to customize all aspects of the plot.
-% downsampling of points in the dataset for plotting and externally set
-% linespecs
+%   plotxppaut1(filename) - plot contents of filename
+%   plotxppaut1(filename,options) - plot with line properties defined in
+%   the options struct, which can be generated and modified using plotxppautset2
+%
+% See also  plotxppautset1 plotxppaut2 plotxppautset2 plotnullclines
 
+% (c) Patrick Fletcher 2015
+% Inspired by PlotXppaut by Mohammad S. Imtiaz
 % 07/08/2016: Support XPP8.0's 6 column format. The extra column is to
-% specify twoparameter bifurcation type. Two parameter bifurcation diagrams
-% will require a different way to map linespecs to curves?
-
-%file format - columns: V>=8.0 {par, ymin, ymax, type, branch, 2-par type};
+% specify two-parameter bifurcation type. 
+%
+% columns: V>=8.0 {par, ymin, ymax, type, branch, 2-par type};
 % V<8.0 {par, ymin, ymax, type, branch}
-
-nSubSample=options.nSubSample;
 
 if ~exist('options','var')
     options=plotxppautset1();
 end
+nSubSample=options.nSubSample;
 
 %Colors -- SHOULD BE VALID MATLAB COLORS
 C=options.Colors;
@@ -38,8 +40,9 @@ Ms=options.Markersize;
 %MarkerFaceColor -- SHOULD BE VALID MATLAB COLORS
 Mfc=options.MarkerFaceColor;
 
-
 fid = fopen(filename,'rt');
+
+h=[];
 
 if(fid~=-1)
     
@@ -56,7 +59,7 @@ if(fid~=-1)
     
     temp=st';
     
-    temp1=zeros(size(temp,1),8)*NaN;
+%     temp1=zeros(size(temp,1),8)*NaN;
     
     type1=temp(:,4)==1;
     type2=temp(:,4)==2;
@@ -74,77 +77,71 @@ if(fid~=-1)
     type3ix=type3ix(1:nSubSample(3):end);
     type4ix=type4ix(1:nSubSample(4):end);
     
-    temp1(type1ix,[1 5]) = temp(type1ix,[2 3]);
-    temp1(type2ix,[2 6]) = temp(type2ix,[2 3]);
-    temp1(type3ix,[3 7]) = temp(type3ix,[2 3]);
-    temp1(type4ix,[4 8]) = temp(type4ix,[2 3]);
+    x(type1ix,1)=temp(type1ix,1);
+    x(type2ix,2)=temp(type2ix,1);
+    x(type3ix,3)=temp(type3ix,1);
+    x(type4ix,4)=temp(type4ix,1);
+    
+    y(type1ix,1)=temp(type1ix,2);
+    y(type2ix,2)=temp(type2ix,2);
+    ymin(type3ix,1)=temp(type3ix,2);
+    ymax(type3ix,1)=temp(type3ix,3);
+    ymin(type4ix,2)=temp(type4ix,2);
+    ymax(type4ix,2)=temp(type4ix,3);
+    
+%     temp1(type1ix,[1 5]) = temp(type1ix,[2 3]);
+%     temp1(type2ix,[2 6]) = temp(type2ix,[2 3]);
+%     temp1(type3ix,[3 7]) = temp(type3ix,[2 3]);
+%     temp1(type4ix,[4 8]) = temp(type4ix,[2 3]);
     
     
-    %above does the same without loops.
-    %   for n=1:size(temp1,1),
-    %     if(temp(n,4)==1),
-    %       temp1(n,[1 5]) = temp(n,[2 3]);
-    %     end;
-    %     if(temp(n,4)==2),
-    %       temp1(n,[2 6]) = temp(n,[2 3]);
-    %     end;
-    %     if(temp(n,4)==3),
-    %       temp1(n,[3 7]) = temp(n,[2 3]);
-    %     end;
-    %     if(temp(n,4)==4),
-    %       temp1(n,[4 8]) = temp(n,[2 3]);
-    %     end;
-    %   end;
-    
-    
-    % $$$ figure;
+    %%% Now plot
     %	-----------------------------------------
-    h_SS = plot(temp(:,1),temp1(:,[1 5]));
-    set(h_SS,'color',C.Ss)
-    set(h_SS,'linestyle',Lt.Ss)
-    set(h_SS,'linewidth',Lw.Ss)
-    set(h_SS,'Marker',M.Ss)
-    set(h_SS,'Markersize',Ms.Ss)
-    set(h_SS,'MarkerFacecolor',Mfc.Ss)
+%     h.SS = plot(temp(:,1),temp1(:,[1 5]));
+    h.SS = plot(x(:,1),y(:,1));
+    set(h.SS,'color',C.Ss)
+    set(h.SS,'linestyle',Lt.Ss)
+    set(h.SS,'linewidth',Lw.Ss)
+    set(h.SS,'Marker',M.Ss)
+    set(h.SS,'Markersize',Ms.Ss)
+    set(h.SS,'MarkerFacecolor',Mfc.Ss)
     hold on;
     
     %	-----------------------------------------
-    h_US = plot(temp(:,1),temp1(:,[2 6]));
-    set(h_US,'color',C.Us)
-    set(h_US,'linestyle',Lt.Us)
-    set(h_US,'linewidth',Lw.Us)
-    set(h_US,'Marker',M.Us)
-    set(h_US,'Markersize',Ms.Us)
-    set(h_US,'MarkerFacecolor',Mfc.Us)
+%     h.US = plot(temp(:,1),temp1(:,[2 6]));
+    h.US = plot(x(:,2),y(:,2));
+    set(h.US,'color',C.Us)
+    set(h.US,'linestyle',Lt.Us)
+    set(h.US,'linewidth',Lw.Us)
+    set(h.US,'Marker',M.Us)
+    set(h.US,'Markersize',Ms.Us)
+    set(h.US,'MarkerFacecolor',Mfc.Us)
     
     %	-----------------------------------------
     
     
-    h_SP = plot(temp(:,1),temp1(:,[3 7]));
-    set(h_SP,'color',C.Sp)
-    set(h_SP,'linestyle',Lt.Sp)
-    set(h_SP,'linewidth',Lw.Sp)
-    set(h_SP,'Marker',M.Sp)
-    set(h_SP,'Markersize',Ms.Sp)
-    set(h_SP,'MarkerFacecolor',Mfc.Sp)
+%     h.SP = plot(temp(:,1),temp1(:,[3 7]));
+    h.SP = plot(x(:,3),[ymin(:,1), ymax(:,1)]);
+    set(h.SP,'color',C.Sp)
+    set(h.SP,'linestyle',Lt.Sp)
+    set(h.SP,'linewidth',Lw.Sp)
+    set(h.SP,'Marker',M.Sp)
+    set(h.SP,'Markersize',Ms.Sp)
+    set(h.SP,'MarkerFacecolor',Mfc.Sp)
     %	-----------------------------------------
     
     
-    h_UP = plot(temp(:,1),temp1(:,[4 8]));
-    set(h_UP,'color',C.Up)
-    set(h_UP,'linestyle',Lt.Up)
-    set(h_UP,'linewidth',Lw.Up)
-    set(h_UP,'Marker',M.Up)
-    set(h_UP,'Markersize',Ms.Up)
-    set(h_UP,'MarkerFacecolor',Mfc.Up)
+%     h.UP = plot(temp(:,1),temp1(:,[4 8]));
+    h.UP = plot(x(:,4),[ymin(:,2), ymax(:,2)]);
+    set(h.UP,'color',C.Up)
+    set(h.UP,'linestyle',Lt.Up)
+    set(h.UP,'linewidth',Lw.Up)
+    set(h.UP,'Marker',M.Up)
+    set(h.UP,'Markersize',Ms.Up)
+    set(h.UP,'MarkerFacecolor',Mfc.Up)
     %	-----------------------------------------
     
     
-    %   grid on;
-    %   axis tight
-    %   xlabel('Bifurcation parameter')
-    %   ylabel('Variable')
-    %   title(file_name);
 else
     error(['Could not open file: ' filename ])
 end

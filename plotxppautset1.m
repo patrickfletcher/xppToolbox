@@ -1,9 +1,17 @@
 function options=plotxppautset1(varargin)
-% Creates or updates an option structure to specify the line format of each
+% PLOTXPPAUTSET1 Create or update an option structure to specify the line properties of each
 % type of solution branch in a 1-parameter bifurcation diagram to be
-% plotted by plotxppaut1.
+% plotted by plotxppaut1. Defaults are set to mimic XPPAUT appearance.
 %
-% Defaults are set to mimic XPPAUT appearance.
+%    optionStruct=PLOTXPPAUTSET1('Name','Value')
+%
+% Where 'Name' and 'Value' are line properties; 
+%
+% See also  plotxppaut1 plotxppaut2 plotxppautset2 plotnullclines
+
+
+% index of type of curve:
+% 1-Stable SS, 2-Unstable SS, 3-Stable LC, 4-Unstable LC
 
 
 % Print out possible values of properties.
