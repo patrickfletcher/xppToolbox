@@ -4,7 +4,7 @@ function [t,Y,DY,AUX]=ode_euler(getRHS,tspan,dt,y0,nWiener)
 % 
 
 ti=tspan(1);
-yi=y0;
+yi=y0(:);
 nSteps=ceil( (tspan(2)-tspan(1))/dt )+1;
 t=zeros(nSteps,1);
 Y=zeros(nSteps,length(y0));

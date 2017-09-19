@@ -1,4 +1,4 @@
-function [destinationFile, xppdata]=xppConverter(destinationType, sourceFile, destinationFile, precision)
+function [destinationFile, xppdata]=xppConverter(sourceFile, destinationType, destinationFile, cSinglePrecision)
 % code conversion from ODE file for XPP to other formats. These include:
 % - Matlab: M or MEX files, for use in Matlab ODE solvers
 % - clODE: CL file for use in clODE parallel ode solver
@@ -10,16 +10,13 @@ function [destinationFile, xppdata]=xppConverter(destinationType, sourceFile, de
 %
 % Inputs
 %   none - will prompt for ODE file, write to same name .m in working dir
-%   arg1: either full path to ODE file, or pre-generated ivpStruct
-%   destinationFile: specified output filename, NO extension (will be .m)
-%   precision: for c-code output, optionally specify single/double
+%   sourceFile - ode filename
+%   destinationFile - output filename
+%   precision - single/double, for c code
 %
 % Outputs
 %   mFileName: string conatining the destination filename without extension
-%   pars: default parameter values set in the ODE file
-%   y0: default initial conditions set in the ODE file
-%   opt: options structure contining all options found in ODE file (will be
-%        empty if the ivpstruct was passed in as arg1)
+%   xppdata: structure containing all ODE file information
 %
 % Example for using MatLab's ODE solvers:
 %   [mFunctionName,p,y0]=ode2m('./xppSrc/lactotroph.ode');
@@ -68,8 +65,8 @@ else
     %check whether it exists, and ask if overwriting it is ok?
 end
 
-if ~exist('precision','var') || isempty(precision)
-    precision='double';
+if ~exist('precision','var')
+    cSinglePrecision=false;
 end
 
 switch lower(destinationType)
@@ -79,12 +76,11 @@ switch lower(destinationType)
         
     case {'mex'}
         fileExtension='c';
-        output_file=BuildOutputFileMEX(xppdata,precision);
+        output_file=BuildOutputFileMEX(xppdata,cSinglePrecision);
         
     case {'cl'}
         fileExtension='cl';
-        precision='single'; %only single works right now....
-        output_file=BuildOutputFileCL(xppdata,precision);
+        output_file=BuildOutputFileCL(xppdata,cSinglePrecision);
         
     case {'vfgen'}
         fileExtension='vf';
@@ -140,6 +136,7 @@ switch lower(destinationType)
         
     case {'cl'}
         xppdata.clRHSfilename=fullDestinationPath;
+        destinationFile=fullDestinationPath;
         
     case {'vfgen'}
         
@@ -194,9 +191,14 @@ stateName='x_';
 paramName='p_';
 slopeName='dx_';
 auxName='aux_';
+wienerName='w_';
 
 output_file={};
+if xppdata.nWiener==0
 output_file{1}=['function [' slopeName ', ' auxName ']=' destinationFile '(t,' stateName ',' paramName ')'];
+else
+output_file{1}=['function [' slopeName ', ' auxName ']=' destinationFile '(t,' stateName ',' wienerName ',' paramName ')'];
+end
 output_file{2}=[slopeName '=zeros(' num2str(xppdata.nVar) ',1);'];
 output_file{3}=[auxName '=zeros(' num2str(xppdata.nAux) ',1);']; %initialize to empty if no Aux
 
@@ -346,6 +348,10 @@ end
                 
                 %replace with new arg name
                 tok=thisfunc.arg_names{tokenIx(j)};
+                
+            elseif tokenType(j)==8 %Wiener variable
+                tok=[wienerName '(' num2str(tokenIx(j)) ')'];
+                
             else
                 error('Unidentified token type. Problem parsing??')
             end
@@ -447,12 +453,16 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% BuildOutputFileMEX
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function output_file=BuildOutputFileMEX(xppdata,precision)
+function output_file=BuildOutputFileMEX(xppdata,cSinglePrecision)
 
-if strcmpi(precision,'single')
+if cSinglePrecision
     numFormat='%0.7f'; %7 digits, single precision floating point
-elseif strcmpi(precision,'double')
+else
     numFormat='%0.14f'; %14 digits, double precision floating point
+end
+
+if xppdata.nWiener>0
+    error('Wiener process not yet supported in ode2mex')
 end
 
 num=xppdata.num;
@@ -480,9 +490,9 @@ auxName='aux_';
 
 output_file{1}='#include <math.h>';
 output_file{end+1}='#include "mex.h"';
-if strcmpi(precision,'single')
+if cSinglePrecision
     output_file{end+1}='#define realtype float';
-elseif strcmpi(precision,'double')
+else
     output_file{end+1}='#define realtype double'; %14 digits, double precision floating point
 end
 
@@ -490,34 +500,40 @@ output_file{end+1}=['#define N_PAR ' num2str(xppdata.nPar)];
 output_file{end+1}=['#define N_VAR ' num2str(xppdata.nVar)];
 output_file{end+1}=['#define N_AUX ' num2str(max(xppdata.nAux,1))]; %number of auxiliary variables should be at least 1... bug?
 
-%put function definitions first
-for i=1:xppdata.nFunc
-    
-    name=func(i).name; %case is all lower after parser (XPP is case insensitive)
-    
-    %rename the arg list
-    %     num_args=length(func(i).arg_names);
-    %     arglist=[];
-    %     for k=1:num_args
-    %         func(i).arg_names{k}=['arg',num2str(k)];
-    %         arglist=[arglist,'realtype arg',num2str(k),','];
-    %     end
-    %     arglist=arglist(1:end-1); %remove last comma
-    %
-    %     func(i).full_arglist=arglist;
-    
-    tokens=func(i).formulaToken(:);
-    tokenType=func(i).tokenType;
-    tokenIx=func(i).tokenIx;
-    thisFormula=buildFormula(tokens,tokenType,tokenIx,func(i));
-    
-    %     output_file{end+1}=['#define ' name '(' func(i).full_arglist ') ' thisFormula];
-    
-    %     output_file{end+1}=['realtype ' name '(realtype t, realtype p[], realtype y[], ' func(i).full_arglist ') {' ];
-    %     output_file{end+1}=['   return ' thisFormula ';'];
-    %     output_file{end+1}=['}'];
-    output_file{end+1}='';
+%function notation not yet supported for OpenCL.
+if xppdata.nFunc>0
+    disp('Error processing line: ')
+    disp([func(1).name '(' func(1).full_arglist ')='  func(1).formula])
+    error('"name(var1,var2,...)=formula" function notation not yet supported');
 end
+% %put function definitions first
+% for i=1:xppdata.nFunc
+%     
+%     name=func(i).name; %case is all lower after parser (XPP is case insensitive)
+%     
+%     %rename the arg list
+%     %     num_args=length(func(i).arg_names);
+%     %     arglist=[];
+%     %     for k=1:num_args
+%     %         func(i).arg_names{k}=['arg',num2str(k)];
+%     %         arglist=[arglist,'realtype arg',num2str(k),','];
+%     %     end
+%     %     arglist=arglist(1:end-1); %remove last comma
+%     %
+%     %     func(i).full_arglist=arglist;
+%     
+%     tokens=func(i).formulaToken(:);
+%     tokenType=func(i).tokenType;
+%     tokenIx=func(i).tokenIx;
+%     thisFormula=buildFormula(tokens,tokenType,tokenIx,func(i));
+%     
+%     %     output_file{end+1}=['#define ' name '(' func(i).full_arglist ') ' thisFormula];
+%     
+%     %     output_file{end+1}=['realtype ' name '(realtype t, realtype p[], realtype y[], ' func(i).full_arglist ') {' ];
+%     %     output_file{end+1}=['   return ' thisFormula ';'];
+%     %     output_file{end+1}=['}'];
+%     output_file{end+1}='';
+% end
 
 %main body of RHS file
 output_file{end+1}=['static void yprime(realtype *t, realtype ' ...
@@ -599,7 +615,7 @@ end
                 tok=tok(1:find(tok~='0',1,'last'));
                 tok=[tok,'0'];
                 
-                if strcmpi(precision,'single') %add an f to indicate single precision
+                if cSinglePrecision %add an f to indicate single precision
                     tok=[tok,'f'];
                 end
                 
@@ -715,11 +731,11 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% BuildOutputFileCL
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function output_file=BuildOutputFileCL(xppdata,precision)
+function output_file=BuildOutputFileCL(xppdata,cSinglePrecision)
 
-if strcmpi(precision,'single')
+if cSinglePrecision
     numFormat='%0.7f'; %7 digits, single precision floating point
-elseif strcmpi(precision,'double')
+else
     numFormat='%0.14f'; %14 digits, double precision floating point
 end
 
@@ -746,6 +762,7 @@ stateName='x_';
 paramName='p_';
 slopeName='dx_';
 auxName='aux_';
+wienerName='w_';
 
 %the opencl header defines realtype to be float or double, based on precision
 
@@ -789,7 +806,7 @@ end
 
 %main body of RHS file
 output_file{end+1}=['void getRHS(realtype t, realtype ' ...
-    stateName '[], realtype ' paramName '[], realtype ' slopeName '[], realtype ' auxName '[]) {'];
+    stateName '[], realtype ' paramName '[], realtype ' slopeName '[], realtype ' auxName '[], realtype ' wienerName '[]) {'];
 
 for i=1:xppdata.nFixed
     
@@ -862,7 +879,7 @@ output_file{end+1}='';
                 tok=tok(1:find(tok~='0',1,'last'));
                 tok=[tok,'0'];
                 
-                if strcmpi(precision,'single') %add an f to indicate single precision
+                if cSinglePrecision %add an f to indicate single precision
                     tok=[tok,'f'];
                 end
                 
@@ -958,6 +975,9 @@ output_file{end+1}='';
             elseif tokenType(j)==7 %formal argument for a function
                 %replace with new arg name
                 tok=thisfunc.arg_names{tokenIx(j)};
+                
+            elseif tokenType(j)==8 %Wiener variable
+                tok=[wienerName '[' num2str(tokenIx(j)-1) ']'];
                 
             else
                 error('Unidentified token type. Problem parsing??')

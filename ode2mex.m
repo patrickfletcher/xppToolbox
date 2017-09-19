@@ -1,5 +1,4 @@
-function [destinationFile, xppdata, clampVarIx]=ode2m(arg1, precision, destinationFile, clampVar)
-
+function [destinationFile, xppdata]=ode2mex(source, destinationFile)
 % code conversion from ODE file for XPP to a MEX file that can be run with
 % MatLab ODE solvers. Calls parseXPPodeFile, writes the ODE information to
 % a .c file, then compiles this into a mex file in the current directory.
@@ -18,73 +17,54 @@ function [destinationFile, xppdata, clampVarIx]=ode2m(arg1, precision, destinati
 % y0 output contains initial variable values
 
 
-%use ccoder(sym(expression)) for getting power/sqrt etc right?
-
 fileExtension='c';
 opt=struct('name',{},'value',{});
 
 % input checking
-if nargin==0
+if nargin==0 || isempty(source)
     [name,path]=uigetfile('.ode','Select an ODE file');
-    arg1=fullfile(path,name);
+    if ~ischar(name)
+        disp('File selection canceled, quitting...')
+        return
+    end
+    source=fullfile(path,name);
 end
 
-if ischar(arg1) %filename input: parse it.
-    srcfilename=arg1;
+if ischar(source) %filename input: parse it.
+    srcfilename=source;
     % Extract info from the ODE file
     xppdata=parseODEfile(srcfilename);
 else %assume it is ivpStruct (TODO: errorchecking)
-    xppdata=arg1;
+    xppdata=source;
 end
-
-ivpname=xppdata.name;
 
 %Build the destination filename
 if ~exist('destinationFile','var')||isempty(destinationFile)
-    destinationFile=ivpname;
+    destinationFile=xppdata.name;
 else
-    fileSepIx=find(destinationFile==filesep,1,'last');
-    if isempty(fileSepIx)
-        mFunctionName=destinationFile;
-    else
-        mFunctionName=destinationFile(fileSepIx+1:end);
-    end
+    %destinationFile was provided. Extract just the filename without
+    %extension or path.
+    [~,destinationFile]=fileparts(destinationFile);
+    
+    %check whether it exists, and ask if overwriting it is ok?
 end
 
-doClamp=false;
-clampVarIx=[];
-if exist('clampVar','var')&&~isempty(clampVar)
-    %Check whether clamped variable name specified was in the ODE file
-    clampVarIx=find(strcmpi({var(:).name},clampVar));
-    if ~isempty(clampVarIx)
-        doClamp=true;
-        destinationFile=[destinationFile '_' var(clampVarIx).name '_clamp'];
-    else
-        disp('Warning: the variable specified for clamping was not found! No variables were clamped.')
-    end
-end
-
-% destinationFile=[destinationFile '.' fileExtension];
-destinationFile=[destinationFile '_mex.' fileExtension]; %for testing, so i can also have the m-file
-%end build destination filename
-
-if ~exist('precision','var') || isempty(precision)
+%only double precision works for now
+% if ~exist('precision','var') || isempty(precision)
     precision='double';
-end
+% end
 
-
-output_file=BuildOutputFile(xppdata,doClamp,precision,destinationFile);
+output_file=BuildOutputFile(xppdata,precision);
 lineCount=length(output_file);
 
-
 %delete a previous version - silently destroys any previous version!
-fullPath=[pwd filesep destinationFile];
-if exist(fullPath,'file')==2
-    delete(fullPath)
+fullDestinationPath=[pwd filesep destinationFile '.' fileExtension];
+if exist(fullDestinationPath,'file')==2
+    delete(fullDestinationPath)
 end
 
 % write to file
-fidw=fopen(fullPath,'w');
+fidw=fopen(fullDestinationPath,'w');
 
 if fidw ~= -1
     for line=1:lineCount
@@ -93,27 +73,29 @@ if fidw ~= -1
     
     fclose(fidw);
 else
-    fprintf(' Problem opening file %s for writing. Cannot continue\n',fullPath);
+    fprintf(' Problem opening file %s for writing. Cannot continue\n',fullDestinationPath);
     return
 end
 
 %compile the mex file
-mex(fullPath);
+mex(fullDestinationPath);
 disp('mex file generated')
 
-
-[~,destinationFile]=fileparts(destinationFile);
 
 end
 
 
 
-function output_file=BuildOutputFile(xppdata,doClamp,precision,destinationFile)
+function output_file=BuildOutputFile(xppdata,precision)
 
 if strcmpi(precision,'single')
     numFormat='%0.7f'; %7 digits, single precision floating point
 elseif strcmpi(precision,'double')
     numFormat='%0.14f'; %14 digits, double precision floating point
+end
+
+if xppdata.nWiener>0
+    error('Wiener process not yet supported in ode2mex')
 end
 
 num=xppdata.num;
@@ -128,6 +110,7 @@ stateName='x_';
 paramName='p_';
 slopeName='dx_';
 auxName='aux_';
+wienerName='w_';
 
 % build the output as a cell array containing each line.
 % Structure:
@@ -149,40 +132,55 @@ end
 
 output_file{end+1}=['#define N_PAR ' num2str(xppdata.nPar)];
 output_file{end+1}=['#define N_VAR ' num2str(xppdata.nVar)];
-output_file{end+1}=['#define N_AUX ' num2str(max(xppdata.nAux,1))]; %number of auxiliary variables should be at least 1... bug?
+output_file{end+1}=['#define N_AUX ' num2str(xppdata.nAux)]; %number of auxiliary variables should be at least 1... bug?
+% output_file{end+1}=['#define N_WIENER ' num2str(xppdata.nWiener)]; %number of auxiliary variables should be at least 1... bug?
 
-%put function definitions first
-for i=1:xppdata.nFunc
-    
-    name=func(i).name; %case is all lower after parser (XPP is case insensitive)
-    
-    %rename the arg list
-    %     num_args=length(func(i).arg_names);
-    %     arglist=[];
-    %     for k=1:num_args
-    %         func(i).arg_names{k}=['arg',num2str(k)];
-    %         arglist=[arglist,'realtype arg',num2str(k),','];
-    %     end
-    %     arglist=arglist(1:end-1); %remove last comma
-    %
-    %     func(i).full_arglist=arglist;
-    
-    tokens=func(i).formulaToken(:);
-    tokenType=func(i).tokenType;
-    tokenIx=func(i).tokenIx;
-    thisFormula=buildFormula(tokens,tokenType,tokenIx,func(i));
-    
-    %     output_file{end+1}=['#define ' name '(' func(i).full_arglist ') ' thisFormula];
-    
-    %     output_file{end+1}=['realtype ' name '(realtype t, realtype p[], realtype y[], ' func(i).full_arglist ') {' ];
-    %     output_file{end+1}=['   return ' thisFormula ';'];
-    %     output_file{end+1}=['}'];
-    output_file{end+1}='';
+
+%function notation not yet supported for C.
+if xppdata.nFunc>0
+    disp('Error processing line: ')
+    disp([func(1).name '(' func(1).full_arglist ')='  func(1).formula])
+    error('"name(var1,var2,...)=formula" function notation not yet supported');
 end
 
+%put function definitions first
+% for i=1:xppdata.nFunc
+%     
+%     name=func(i).name; %case is all lower after parser (XPP is case insensitive)
+%     
+%     %rename the arg list
+%     %     num_args=length(func(i).arg_names);
+%     %     arglist=[];
+%     %     for k=1:num_args
+%     %         func(i).arg_names{k}=['arg',num2str(k)];
+%     %         arglist=[arglist,'realtype arg',num2str(k),','];
+%     %     end
+%     %     arglist=arglist(1:end-1); %remove last comma
+%     %
+%     %     func(i).full_arglist=arglist;
+%     
+%     tokens=func(i).formulaToken(:);
+%     tokenType=func(i).tokenType;
+%     tokenIx=func(i).tokenIx;
+%     thisFormula=buildFormula(tokens,tokenType,tokenIx,func(i));
+%     
+%     %     output_file{end+1}=['#define ' name '(' func(i).full_arglist ') ' thisFormula];
+%     
+%     %     output_file{end+1}=['realtype ' name '(realtype t, realtype p[], realtype y[], ' func(i).full_arglist ') {' ];
+%     %     output_file{end+1}=['   return ' thisFormula ';'];
+%     %     output_file{end+1}=['}'];
+%     output_file{end+1}='';
+% end
+
 %main body of RHS file
+
+% if xppdata.nWiener==0
 output_file{end+1}=['static void yprime(realtype *t, realtype ' ...
     stateName '[], realtype ' paramName '[], realtype ' slopeName '[], realtype ' auxName '[]) {'];
+% else
+% output_file{end+1}=['static void yprime(realtype *t, realtype ' ...
+%     stateName '[], realtype ' paramName '[], realtype ' slopeName '[], realtype ' auxName '[]) {'];
+% end
 
 for i=1:xppdata.nFixed
     
@@ -206,11 +204,7 @@ for i=1:xppdata.nVar
     
     thisFormula=buildFormula(tokens,tokenType,tokenIx);
     
-    if doClamp && i==clampVarIx
-        output_file{end+1}=[slopeName '[' num2str(i-1) ']=0;'];
-    else
-        output_file{end+1}=[slopeName '[' num2str(i-1) ']=' thisFormula ';'];
-    end
+    output_file{end+1}=[slopeName '[' num2str(i-1) ']=' thisFormula ';'];
 end
 
 for i=1:xppdata.nAux
@@ -244,80 +238,7 @@ end
         
         %convert "a^b" to "pow(a,b)" - find a(:),^,b(:) then replace with
         %{'pow' '(' a(:) ',' b(:) ')'}
-        
-        nPow=sum(strcmpi(tokens,'^'));
-        for j=1:nPow
-            base={};baseType=[];baseTokIx=[];
-            expon={};exponType=[];exponTokIx=[];
-            thisPowIx=find(strcmpi(tokens,'^'),1,'first');
-            %find base: number/name or something in parentheses
-            if tokenType(thisPowIx-1)==1
-                %assume it is ')' for now: full validity of math expressions is not checked!!!!
-                base={tokens{thisPowIx-1}};
-                baseType=tokenType(thisPowIx-1);
-                baseTokIx=tokenIx(thisPowIx-1);
-                
-                parenCount=1; %increment for ')', decrement for '('
-                ix=1;
-                while parenCount>0
-                    ix=ix+1;
-                    %check whether parentheses have closed
-                    if strcmp(tokens(thisPowIx-ix),'(')
-                        parenCount=parenCount-1;
-                    elseif strcmp(tokens(thisPowIx-ix),')')
-                        parenCount=parenCount+1;
-                    end
-                    
-                    %add the new token to beginning of base
-                    base={tokens{thisPowIx-ix},base{:}};
-                    baseType=[tokenType(thisPowIx-ix),baseType];
-                    baseTokIx=[tokenIx(thisPowIx-ix),baseTokIx];
-                    baseStartIx=thisPowIx-ix;
-                end
-                
-            else
-                base={tokens{thisPowIx-1}};
-                baseType=tokenType(thisPowIx-1);
-                baseTokIx=tokenIx(thisPowIx-1);
-                baseStartIx=thisPowIx-1;
-            end
-            
-            %find exponent: number/name or something in parentheses
-            if tokenType(thisPowIx+1)==1
-                
-                expon={tokens{thisPowIx+1}};
-                exponType=tokenType(thisPowIx+1);
-                exponTokIx=tokenIx(thisPowIx+1);
-                
-                parenCount=1; %increment for '(', decrement for ')'
-                ix=1;
-                while parenCount>0
-                    ix=ix+1;
-                    %check whether parentheses have closed
-                    if strcmp(tokens(thisPowIx+ix),')')
-                        parenCount=parenCount-1;
-                    elseif strcmp(tokens(thisPowIx+ix),'(')
-                        parenCount=parenCount+1;
-                    end
-                    
-                    %add the new token to beginning of base
-                    expon={expon{:},tokens{thisPowIx+ix}};
-                    exponType=[exponType,tokenType(thisPowIx+ix)];
-                    exponTokIx=[exponTokIx,tokenIx(thisPowIx+ix)];
-                    exponEndIx=thisPowIx+ix;
-                end
-                
-            else
-                expon={tokens{thisPowIx+1}};
-                exponType=tokenType(thisPowIx+1);
-                exponTokIx=tokenIx(thisPowIx+1);
-                exponEndIx=thisPowIx+1;
-            end
-            
-            tokens={tokens{1:baseStartIx-1},'pow','(', base{:}, ',', expon{:}, ')', tokens{exponEndIx+1:end} };
-            tokenType=[tokenType(1:baseStartIx-1),1,1,baseType,1,exponType,1,tokenType(exponEndIx+1:end)];
-            tokenIx=[tokenIx(1:baseStartIx-1),0,0,baseTokIx,0,exponTokIx,0,tokenIx(exponEndIx+1:end)];
-        end
+        [tokens,tokenType,tokenIx]=convertPowers(tokens,tokenType,tokenIx);
         
         %functions of form: name(arg1,arg2,...,arg3) can be left as is, and the
         %args modified as appropriate, as long as "name" is a known predefined
@@ -357,10 +278,6 @@ end
                 switch tok
                     case 'abs'
                         tok='fabs';
-                        
-                        %             case 'heav' %helper function named heav is defined
-                        %             tok='step';
-                        
                         
                     case 't'
                         tok='*t';
@@ -443,6 +360,9 @@ end
                 %replace with new arg name
                 tok=thisfunc.arg_names{tokenIx(j)};
                 
+            elseif tokenType(j)==8 %Wiener variable
+                tok=[wienerName '[' num2str(tokenIx(j)-1) ']'];
+                
             else
                 error('Unidentified token type. Problem parsing??')
             end
@@ -452,4 +372,90 @@ end
         end
     end
 
+end
+
+
+%%% C-language helpers
+function [tokens,tokenType,tokenIx]=convertPowers(tokens,tokenType,tokenIx)
+%convert "a^b" to "pow(a,b)" - find a(:),^,b(:) then replace with
+%{'pow' '(' a(:) ',' b(:) ')'}
+
+%TODO: find a way to check if exponent is integer, then use pown
+%if isreal(x) && rem(x,1)==0, where x=expon{:} concatenated... If only
+%numbers are in expon, should work, but if names, would need to recursively
+%check if it all boils down to a number
+
+nPow=sum(strcmpi(tokens,'^'));
+for j=1:nPow
+    base={};baseType=[];baseTokIx=[];
+    expon={};exponType=[];exponTokIx=[];
+    thisPowIx=find(strcmpi(tokens,'^'),1,'first');
+    %find base: number/name or something in parentheses
+    if tokenType(thisPowIx-1)==1
+        %assume it is ')' for now: full validity of math expressions is not checked!!!!
+        base={tokens{thisPowIx-1}};
+        baseType=tokenType(thisPowIx-1);
+        baseTokIx=tokenIx(thisPowIx-1);
+        
+        parenCount=1; %increment for ')', decrement for '('
+        ix=1;
+        while parenCount>0
+            ix=ix+1;
+            %check whether parentheses have closed
+            if strcmp(tokens(thisPowIx-ix),'(')
+                parenCount=parenCount-1;
+            elseif strcmp(tokens(thisPowIx-ix),')')
+                parenCount=parenCount+1;
+            end
+            
+            %add the new token to beginning of base
+            base={tokens{thisPowIx-ix},base{:}};
+            baseType=[tokenType(thisPowIx-ix),baseType];
+            baseTokIx=[tokenIx(thisPowIx-ix),baseTokIx];
+            baseStartIx=thisPowIx-ix;
+        end
+        
+    else
+        base={tokens{thisPowIx-1}};
+        baseType=tokenType(thisPowIx-1);
+        baseTokIx=tokenIx(thisPowIx-1);
+        baseStartIx=thisPowIx-1;
+    end
+    
+    %find exponent: number/name or something in parentheses
+    if tokenType(thisPowIx+1)==1
+        
+        expon={tokens{thisPowIx+1}};
+        exponType=tokenType(thisPowIx+1);
+        exponTokIx=tokenIx(thisPowIx+1);
+        
+        parenCount=1; %increment for '(', decrement for ')'
+        ix=1;
+        while parenCount>0
+            ix=ix+1;
+            %check whether parentheses have closed
+            if strcmp(tokens(thisPowIx+ix),')')
+                parenCount=parenCount-1;
+            elseif strcmp(tokens(thisPowIx+ix),'(')
+                parenCount=parenCount+1;
+            end
+            
+            %add the new token to beginning of base
+            expon={expon{:},tokens{thisPowIx+ix}};
+            exponType=[exponType,tokenType(thisPowIx+ix)];
+            exponTokIx=[exponTokIx,tokenIx(thisPowIx+ix)];
+            exponEndIx=thisPowIx+ix;
+        end
+        
+    else
+        expon={tokens{thisPowIx+1}};
+        exponType=tokenType(thisPowIx+1);
+        exponTokIx=tokenIx(thisPowIx+1);
+        exponEndIx=thisPowIx+1;
+    end
+    
+    tokens={tokens{1:baseStartIx-1},'pow','(', base{:}, ',', expon{:}, ')', tokens{exponEndIx+1:end} };
+    tokenType=[tokenType(1:baseStartIx-1),1,1,baseType,1,exponType,1,tokenType(exponEndIx+1:end)];
+    tokenIx=[tokenIx(1:baseStartIx-1),0,0,baseTokIx,0,exponTokIx,0,tokenIx(exponEndIx+1:end)];
+end
 end

@@ -768,7 +768,6 @@ disp('')
 
                 [isTrue,thisIx]=ismember(tok,{wiener(:).name});
                 if isTrue
-                    tokens{end+1}=tok;
                     types(end+1)=8;
                     ix(end+1)=thisIx;
                     continue;

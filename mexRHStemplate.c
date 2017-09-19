@@ -17,8 +17,7 @@
 * (C) Patrick Fletcher,  October 2015
 */
 
-//TODO: use realtype throughout, so single precision choice works
-
+//ONLY DOUBLE WORKS using this template...
 		   
 /* Input Arguments */
 #define	T_IN	prhs[0]
@@ -36,6 +35,10 @@
 
 #if !defined(MIN)
 #define	MIN(A, B)	((A) < (B) ? (A) : (B))
+#endif
+
+#if !defined(heav)
+#define heav(x) ((x) > 0.0 ? 1.0 : 0.0) 
 #endif
 
 void mexFunction( int nlhs, mxArray *plhs[], 
@@ -79,8 +82,6 @@ void mexFunction( int nlhs, mxArray *plhs[],
     } 
 
 
-	/* TODO: error checking for ALL single and ALL double inputs. We can know what the ode2mex generator RHS function wrote by writing a "realtype" define */
-
 	/* Input Type checking */
 	if (!mxIsSingle(T_IN) && !mxIsDouble(T_IN)) { 
 	    mexErrMsgIdAndTxt( "MATLAB:yprime:invalidT",
@@ -103,12 +104,12 @@ void mexFunction( int nlhs, mxArray *plhs[],
     yp = mxGetPr(YP_OUT);
 	aux = mxGetPr(AUX_OUT);
     
-    t = mxGetPr(T_IN); 
+    t = mxGetPr(T_IN);
     y = mxGetPr(Y_IN);
     p = mxGetPr(P_IN);
         
     /* Do the actual computations in a subroutine */
-    yprime(t,y,p,yp,aux); 
+    yprime(t,y,p,yp,aux);
 
 
     return;

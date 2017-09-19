@@ -1,4 +1,4 @@
-function [destinationFile, xppdata, clampVarIx]=ode2m(arg1, precision, destinationFile, clampVar)
+function [destinationFile, xppdata]=ode2m(source, destinationFile)
 % code conversion from ODE file for XPP to a .m file that can be run with
 % MatLab. Calls parseODEfile, writes the ODE information to a .m file,
 % then packages the secondary parameters into a vector pars. Also produced
@@ -6,21 +6,17 @@ function [destinationFile, xppdata, clampVarIx]=ode2m(arg1, precision, destinati
 % clODE stuff, etc.)
 %
 % USAGE
-%   [mFunctionName, pars, y0, ivp, opt, clampVarIx]=ode2m(arg1, destinationFile, clampVar)
+%   [mFunctionName, xppdata]=ode2m(arg1, destinationFile)
 %
 % Inputs
 %   none - will prompt for ODE file, write to same name .m in working dir
-%   arg1: either full path to ODE file, or pre-generated ivpStruct
-%   destinationFile: specified output filename, NO extension (will be .m)
-%   clampVar: name of variable to set as clamped variable
+%   source: either full path to ODE file, or pre-generated xppdata struct
+%   from parser
+%   destinationFile: specified output filename
 %
 % Outputs
 %   mFileName: string conatining the destination filename without extension
-%   pars: default parameter values set in the ODE file
-%   y0: default initial conditions set in the ODE file
-%   opt: options structure contining all options found in ODE file (will be
-%        empty if the ivpstruct was passed in as arg1)
-%   clampVarIx: index of the variable that is clamped to its y0 value
+%   xppdata: structure containing all ODE file information
 %
 % Example for using MatLab's ODE solvers:
 %   [mFunctionName,p,y0]=ode2m('./xppSrc/lactotroph.ode');
@@ -28,29 +24,27 @@ function [destinationFile, xppdata, clampVarIx]=ode2m(arg1, precision, destinati
 %   ode45(fun,[0,1000],y0);
 
 %TO DO
-% - standardize file I/O stuff!!!
-% - both ode2m and ode2cl share several aspects... helper functions for input checking, I/O setup, etc??
 % - destination file overwriting behavior? now destroys any existing copy
 % - don't use symbolic toolbox heaviside!!
 
 fileExtension='m';
 
 % input checking
-if nargin==0 || isempty(arg1)
+if nargin==0 || isempty(source)
     [name,path]=uigetfile('.ode','Select an ODE file');
     if ~ischar(name)
         disp('File selection canceled, quitting...')
         return
     end
-    arg1=fullfile(path,name);
+    source=fullfile(path,name);
 end
 
-if ischar(arg1) %filename input: parse it.
-    srcfilename=arg1;
+if ischar(source) %filename input: parse it.
+    srcfilename=source;
     % Extract info from the ODE file
     xppdata=parseODEfile(srcfilename);
 else %assume it is ivpStruct (TODO: errorchecking)
-    xppdata=arg1;
+    xppdata=source;
 end
 
 %Build the destination filename
@@ -64,26 +58,7 @@ else
     %check whether it exists, and ask if overwriting it is ok?
 end
 
-
-if ~exist('precision','var') || isempty(precision)
-    precision='double';
-end
-
-
-doClamp=false;
-clampVarIx=[];
-if exist('clampVar','var')&&~isempty(clampVar)
-    %Check whether clamped variable name specified was in the ODE file
-    clampVarIx=find(strcmpi({xppdata.var(:).name},clampVar));
-    if ~isempty(clampVarIx)
-        doClamp=true;
-        destinationFile=[destinationFile '_' xppdata.var(clampVarIx).name '_clamp'];
-    else
-        disp('Warning: the variable specified for clamping was not found! No variables were clamped.')
-    end
-end
-
-output_file=BuildOutputFile(xppdata,doClamp,precision,destinationFile);
+output_file=BuildOutputFile(xppdata,destinationFile);
 lineCount=length(output_file);
 
 %delete a previous version - silently destroys any previous version!
@@ -132,13 +107,7 @@ end
 
 end
 
-function output_file=BuildOutputFile(xppdata,doClamp,precision,destinationFile)
-
-if strcmpi(precision,'single')
-    numFormat='%0.7f'; %7 digits, single precision floating point
-elseif strcmpi(precision,'double')
-    numFormat='%0.14f'; %14 digits, double precision floating point
-end
+function output_file=BuildOutputFile(xppdata,destinationFile)
 
 num=xppdata.num;
 var=xppdata.var;
@@ -161,11 +130,16 @@ stateName='x_';
 paramName='p_';
 slopeName='dx_';
 auxName='aux_';
+wienerName='w_';
 
 output_file={};
+if xppdata.nWiener==0
 output_file{1}=['function [' slopeName ', ' auxName ']=' destinationFile '(t,' stateName ',' paramName ')'];
-output_file{2}=[slopeName '=zeros(' num2str(xppdata.nVar) ',1,''' precision ''');'];
-output_file{3}=[auxName '=zeros(' num2str(xppdata.nAux) ',1,''' precision ''');']; %initialize to empty if no Aux
+else
+output_file{1}=['function [' slopeName ', ' auxName ']=' destinationFile '(t,' stateName ',' wienerName ',' paramName ')'];
+end
+output_file{2}=[slopeName '=zeros(' num2str(xppdata.nVar) ',1);'];
+output_file{3}=[auxName '=zeros(' num2str(xppdata.nAux) ',1);'];
 
 %put anonymous function definitions first
 for i=1:xppdata.nFunc
@@ -214,11 +188,7 @@ for i=1:xppdata.nVar
     
     thisFormula=buildFormula(tokens,tokenType,tokenIx);
     
-    if doClamp && i==clampVarIx
-        output_file{end+1}=[slopeName '(' num2str(i) ',1)=0;'];
-    else
-        output_file{end+1}=[slopeName '(' num2str(i) ',1)=' thisFormula ';'];
-    end
+    output_file{end+1}=[slopeName '(' num2str(i) ',1)=' thisFormula ';'];
 end
 
 for i=1:xppdata.nAux
@@ -251,9 +221,9 @@ end
                     tok=num(tokenIx(j)).value;
                 end
                 
-                %specify format
-                tok=sprintf(numFormat,tok);
                 %remove trailing zeros
+                tok=sprintf('%f',tok);
+                
                 tok=tok(1:find(tok~='0',1,'last'));
                 tok=[tok,'0'];
                 tok=['(' tok ')'];
@@ -319,6 +289,10 @@ end
                 
                 %replace with new arg name
                 tok=thisfunc.arg_names{tokenIx(j)};
+                
+            elseif tokenType(j)==8 %Wiener variable
+                tok=[wienerName '(' num2str(tokenIx(j)) ')'];
+                
             else
                 error('Unidentified token type. Problem parsing??')
             end

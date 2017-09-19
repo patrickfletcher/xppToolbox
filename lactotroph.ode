@@ -26,18 +26,17 @@ n alpha=0.0015
 n ks=0.4
 
 p sig=1
-#wiener w
-w=0
+wiener w
 inoise=sig*w
 
 c2=c*c
 vkdrive = v-vk
 
-minf(v)=1/(1+exp((vm-v)/sm))
+minf=1/(1+exp((vm-v)/sm))
 ninf=1/(1+exp((vn-v)/sn))
 finf=1/(1+exp((vf-v)/sf))
 
-ica=gcal*minf(v)*(v-vca)
+ica=gcal*minf*(v-vca)
 isk=gsk*c2/(c2+ks*ks)*vkdrive
 ibk=gbk*f*vkdrive
 ik=gk*n*vkdrive
