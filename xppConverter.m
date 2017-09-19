@@ -1,4 +1,4 @@
-function [destinationFile, xppdata]=xppConverter(sourceFile, destinationType, destinationFile, precision)
+function [destinationFile, xppdata]=xppConverter(destinationType, sourceFile, destinationFile, precision)
 % code conversion from ODE file for XPP to other formats. These include:
 % - Matlab: M or MEX files, for use in Matlab ODE solvers
 % - clODE: CL file for use in clODE parallel ode solver

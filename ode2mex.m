@@ -124,10 +124,10 @@ aux=xppdata.aux;
 
 %names for internal vectors, to try to avoid potential name collisions
 %with user fixed quantities, parameters, or variables.
-stateName='state_vector';
-paramName='param_vector';
-slopeName='slope_vector';
-auxName='aux_vector';
+stateName='x_';
+paramName='p_';
+slopeName='dx_';
+auxName='aux_';
 
 % build the output as a cell array containing each line.
 % Structure:

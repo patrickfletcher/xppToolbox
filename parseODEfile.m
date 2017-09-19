@@ -85,14 +85,11 @@ var=struct('name',{},'value',{},'lb',{},'ub',{},'formula',{},'formulaToken',{},'
 fixed=struct('name',{},'formula',{},'formulaToken',{},'tokenType',{},'tokenIx',{});
 func=struct('name',{},'full_arglist',{},'arg_names',{},'formula',{},'formulaToken',{},'tokenType',{},'tokenIx',{});
 aux=struct('name',{},'formula',{},'formulaToken',{},'tokenType',{},'tokenIx',{});
+wiener=struct('name',{});
 XPPopt=setXPPopt();
 comment=struct('text',{});
 
-userParNames={}; %set of all names found (pars)
-userNumNames={}; %set of all names found (numbers)
-userFixedNames={}; %set of all names found (fixed)
-userFuncNames={}; %set of all names found (functions)
-userVarNames={}; %set of all names found (vars)
+userNames={}; %set of all user defined names found
 [ReservedNames,SimpleMathChars]=loadSpecialNames(); % Reserved keywords and math operations
 
 file_done = false;
@@ -127,8 +124,8 @@ while ~file_done
     %
     % # - comment
     % " - comment (displayable in XPP, potentially with actions)
-    % ! - derived parameter
-    % 0 - algebraic equation
+    % !name=formula - derived parameter
+    % 0=expr - algebraic equation
     
     if strcmp(fline(1),{'#'}) %comment
         if lastLineWasComment
@@ -164,26 +161,16 @@ while ~file_done
         
     elseif strcmpi(fline(1), '!')
         [LHS, RHS] = ExtractFormula(lower(fline(2:end)));
-        
         %assume LHS is a name
-        
-        % Check to make sure names are valid
-        if any(strcmpi(LHS,[userParNames userVarNames userFixedNames userFuncNames]))
-            disp([num2str(lineCount) ': ' fullLine])
-            error('Error parsing ODE file: duplicate name')
-        elseif any(strcmpi(LHS,ReservedNames))
-            disp([num2str(lineCount) ': ' fullLine])
-            error('Error parsing ODE file: illegal name')
+        if isValidName(LHS)
+            fixed(end+1).name=LHS;  % Treat as a fixed quantity for now
+            fixed(end).formula=RHS;
+            userNames{end+1}=LHS;
         end
-        
-        fixed(end+1).name=LHS;  % Treat as a fixed quantity for now
-        fixed(end).formula=RHS;
-        userFixedNames{end+1}=LHS;
-        
         lastLineWasComment=false;
         continue
+        
     elseif strcmpi(fline(1), '0') %not yet supported
-        [~, RHS] = ExtractFormula(lower(fline));
         disp([num2str(lineCount) ': ' fullLine])
         error('Algebraic equations not yet supported')
     end
@@ -203,32 +190,26 @@ while ~file_done
     end
     
     % KEYWORD lines (have a special word/char as the first word. Space
-    % delimits keyword and following info.
+    % required between keyword and following info.
     %
-    % @ - options
-    % a - auxiliary variable ***
+    % @ name=value - options
+    % a name=formula - auxiliary variable
     % b - boundary condition
-    % done - end of file  %Must be only this word on a line
+    % done - end of file  
     % e - export
     % g - global
-    % i - init
+    % i name=value - init 
     % m - markov
-    % n - number (constant parameter)
+    % n name=value - number (constant parameter)
     % o - option filename (deprecated)
-    % p - parameter
+    % p name=value - parameter
     % se - set (specify a named set of param/init/option)
-    % so - solve algebraic condition ***
+    % so - solve algebraic condition
     % sp - special function
-    % t - table ***
+    % t - table
     % v - volterra
-    % w - wiener
-    %
-    % *** - has (or potentially has) a formula in the line
-    %
-    % Note: this practice is a little dangerous, since adding a new type of
-    % line that begins the same way will cause a bug: line may be parsed into incorrect category!
+    % w name - wiener
     
-    isAux=false;
     [token, rest] = strtok(fline); %token is the word left of the space
     
     token=strtrim(token); %remove leading/trailing spaces (Can I remove all spaces?)
@@ -239,7 +220,7 @@ while ~file_done
         
         % @ - options
         if strcmpi(token(1),'@')
-            [parsed, numparsed] = ParseLine(rest,2);
+            [parsed, numparsed] = ParseLine(rest,2,lineCount);
             for i=1:numparsed
                 XPPopt=setXPPopt(XPPopt,parsed(i).name, parsed(i).num);
             end
@@ -276,22 +257,22 @@ while ~file_done
             
             % i - init
         elseif strcmpi(token(1), 'i')
-            [parsed, numparsed] = ParseLine(rest,1);
+            [parsed, numparsed] = ParseLine(rest,1,lineCount);
             for i=1:numparsed
-                name=parsed(i).name;
-                
                 %Check if this var is found. If not, add it to the list
-                [varFound,varLoc]=ismember(name,{var(:).name});
+                [varFound,varLoc]=ismember(parsed(i).name,{var(:).name});
                 if varFound
                     var(varLoc).value=parsed(i).num;
                     var(varLoc).lb=parsed(i).lb; %empty if no range specified
                     var(varLoc).ub=parsed(i).ub;
                 else
-                    var(end+1).name=name;
-                    var(end).value=parsed(i).num;
-                    var(end).lb=parsed(i).lb; %empty if no range specified
-                    var(end).ub=parsed(i).ub;
-                    userVarNames{end+1}=name;
+                    if isValidName(parsed(i).name)
+                        var(end+1).name=parsed(i).name;
+                        userNames{end+1}=parsed(i).name;
+                        var(end).value=parsed(i).num;
+                        var(end).lb=parsed(i).lb; %empty if no range specified
+                        var(end).ub=parsed(i).ub;
+                    end
                 end
             end
             
@@ -304,17 +285,12 @@ while ~file_done
             
             % n - number (constant parameter)
         elseif strcmpi(token(1), 'n')
-            [parsed, numparsed] = ParseLine(rest,0);
+            [parsed, numparsed] = ParseLine(rest,0,lineCount);
             for i=1:numparsed
-                
-                if ismember(parsed(i).name,{num(:).name})
-                    disp([num2str(lineCount) ': ' fullLine])
-                    error('Duplicate definition of a number')
-                else
+                if isValidName(parsed(i).name)
                     num(end+1).name=parsed(i).name;
+                    userNames{end+1}=parsed(i).name;
                     num(end).value=parsed(i).num;
-                    
-                    userNumNames{end+1}=parsed(i).name;
                 end
             end
             
@@ -327,19 +303,15 @@ while ~file_done
             
             % p - parameter
         elseif strcmpi(token(1), 'p')
-            [parsed, numparsed] = ParseLine(rest,0);
+            [parsed, numparsed] = ParseLine(rest,0,lineCount);
             for i=1:numparsed
-                
-                if ismember(parsed(i).name,{par(:).name})
-                    disp([num2str(lineCount) ': ' fullLine])
-                    error('Duplicate definition of a parameter')
-                else
+                if isValidName(parsed(i).name)
                     par(end+1).name=parsed(i).name;
+                    userNames{end+1}=parsed(i).name;
                     par(end).value=parsed(i).num;
                     par(end).lb=parsed(i).lb;
                     par(end).ub=parsed(i).ub;
                     
-                    userParNames{end+1}=parsed(i).name;
                 end
             end
             
@@ -372,8 +344,15 @@ while ~file_done
             
             % w - wiener
         elseif strcmpi(token(1), 'w')
-            disp([num2str(lineCount) ': ' fullLine])
-            error('Wiener variables are not yet supported')
+            [parsed, numparsed] = ParseLine(rest,3,lineCount);
+            for i=1:numparsed
+                if isValidName(parsed(i).name)
+                    wiener(end+1).name=parsed(i).name;
+                    userNames{end+1}=parsed(i).name;    
+                end
+            end
+            
+            continue
             
         else
             disp([num2str(lineCount) ': ' fullLine])
@@ -391,14 +370,14 @@ while ~file_done
     %quantity.
     
     %%% NAME=FORMULA variants:
-    % dname/dt=formula            - Differential equation
-    % name'=formula               - Differential equation
-    % name(0)=formula             - initial data. If RHS is function of t, represents DDE init.
-    % name(t+1)=formula           - Difference equation
+    % dname/dt=formula            - Differential equation (defines var)
+    % name'=formula               - Differential equation (defines var)
+    % name(0)=value/expr          - initial data. value defines var, expr=>DDE init.
+    % name(t+1)=formula           - Difference equation (defines var)
     % name(t)=formula             - Volterra integral equation
-    % name(var1,var2,...)=formula - function definition (var1-var9 are valid variable names)
+    % name(var1,var2,...)=formula - function definition (var1-var9 names don't matter)
     % name[j1..j2]=expr[j]        - expansion with indexer [j]
-    % name=formula                - temporary quantity (no modifiers to name)
+    % name=formula                - temporary quantity (defines fixed)
     
     
     [LHS,RHS]=ExtractFormula(fline);
@@ -429,23 +408,6 @@ while ~file_done
     elseif length(LHS)>3 && strcmpi(LHS(end-2:end),'(0)')
         isInit=true;
         name=LHS(1:end-3);
-        foundbrackets=any(RHS=='[');
-        if foundbrackets
-            [value,lb,ub,restStr]=parseRangeToken(RHS);
-        elseif isNumericLiteral(RHS)
-            value=str2double(RHS);
-            restStr=[];
-            lb=[];
-            ub=[];
-        else
-            disp([num2str(lineCount) ': ' fullLine])
-            error('I don''t understand what you put in the formula above!')
-        end
-        
-        if ~isempty(restStr)
-            disp([num2str(lineCount) ': ' fullLine])
-            error('Only one initial condition with syntax name(0)=expression allowed per line')
-        end
         
         %name(t+1)=formula
     elseif length(LHS)>5 && strcmpi(LHS(end-4:end),'(t+1)')
@@ -459,8 +421,6 @@ while ~file_done
         
         %name(var1,var2,...)=formula
     elseif length(LHS)>3 && any(LHS=='(') && LHS(end)==')'
-        %         disp([num2str(lineCount) ': ' fullLine])
-        %         error('"name(var1,var2,...)=formula" function notation not yet supported');
         isFunc=true;
         ixLeftPar=find(LHS=='(');
         name=LHS(1:ixLeftPar-1);
@@ -471,7 +431,6 @@ while ~file_done
         while ~isempty(rest)
             [arg_names{end+1},rest]=strtok(rest,',');
         end
-        
         
         %name[j1..j2]=expr[j]
     elseif  length(LHS)>5 && any(LHS=='[')
@@ -487,31 +446,38 @@ while ~file_done
     %%% now process the RHS
     
     if isInit
+        
+        if any(RHS=='[')
+            [value,lb,ub,restStr]=parseRangeToken(RHS);
+        elseif isNumericLiteral(RHS)
+            value=str2double(RHS);
+            restStr=[];
+            lb=[];
+            ub=[];
+        else
+            disp([num2str(lineCount) ': ' fullLine])
+            error('I don''t understand what you put in the formula above!')
+        end
+        
+        if ~isempty(restStr)
+            disp([num2str(lineCount) ': ' fullLine])
+            error('Only one initial condition with syntax name(0)=value allowed per line')
+        end
+        
         % check if we already found the variable
         [varFound,varLoc]=ismember(name,{var(:).name});
         if varFound
             var(varLoc).value=value;
-            %             var(varLoc).range=range;
             var(varLoc).lb=lb;
             var(varLoc).ub=ub;
         else
-            
-            % Check to make sure names are valid
-            if any(strcmpi(name,[userFixedNames userParNames userFuncNames]))
-                disp([num2str(lineCount) ': ' fullLine])
-                error('Error parsing ODE file: duplicate name')
-            elseif any(strcmpi(name,ReservedNames))
-                disp([num2str(lineCount) ': ' fullLine])
-                error('Error parsing ODE file: illegal name')
-            else
+            if isValidName(name)
                 %if not a name used already as a param/fixed/reserved
                 var(end+1).name=name;
-                varLoc=length(var);
-                var(varLoc).value=value;
-                %             var(varLoc).range=range;
-                var(varLoc).lb=lb;
-                var(varLoc).ub=ub;
-                userVarNames{end+1}=name;
+                userNames{end+1}=name;
+                var(end).value=value;
+                var(end).lb=lb;
+                var(end).ub=ub;
             end
         end
         
@@ -521,42 +487,28 @@ while ~file_done
         if varFound
             var(varLoc).formula=RHS;
         else
-            var(end+1).name=name;
-            var(end).formula=RHS;
-            userVarNames{end+1}=name;
+            if isValidName(name)
+                var(end+1).name=name;
+                userNames{end+1}=name;
+                var(end).formula=RHS;
+            end
         end
         
     elseif isFixed
-        % Check to make sure names are valid
-        if any(strcmpi(name,[userParNames userVarNames userFixedNames userFuncNames]))
-            disp([num2str(lineCount) ': ' fullLine])
-            error('Error parsing ODE file: duplicate name')
-        elseif any(strcmpi(name,ReservedNames))
-            disp([num2str(lineCount) ': ' fullLine])
-            error('Error parsing ODE file: use of reserved name')
+        if isValidName(name)
+            fixed(end+1).name=name;
+            userNames{end+1}=name;
+            fixed(end).formula=RHS;
         end
-        
-        %if valid, store
-        fixed(end+1).name=name;
-        fixed(end).formula=RHS;
-        userFixedNames{end+1}=name;
         
     elseif isFunc
-        % Check to make sure names are valid
-        if any(strcmpi(name,[userParNames userVarNames userFixedNames userFuncNames]))
-            disp([num2str(lineCount) ': ' fullLine])
-            error('Error parsing ODE file: duplicate name')
-        elseif any(strcmpi(name,ReservedNames))
-            disp([num2str(lineCount) ': ' fullLine])
-            error('Error parsing ODE file: use of reserved name')
+        if isValidName(name)
+            func(end+1).name=name;
+            userNames{end+1}=name;
+            func(end).arg_names=arg_names; %for checking validity of formula
+            func(end).full_arglist=full_arglist;
+            func(end).formula=RHS;
         end
-        
-        %if valid, store
-        func(end+1).name=name;
-        func(end).arg_names=arg_names; %for checking validity of formula
-        func(end).full_arglist=full_arglist;
-        func(end).formula=RHS;
-        userFuncNames{end+1}=name;
     end
 end
 
@@ -575,6 +527,7 @@ nVar=length(var);
 nFixed=length(fixed);
 nFunc=length(func);
 nAux=length(aux);
+nWiener=length(wiener);
 
 for i=1:nPar
     if isempty(par(i).lb)
@@ -584,6 +537,19 @@ for i=1:nPar
         par(i).ub=par(i).value;
     end
 end
+
+
+% TODO: reordering of fixed quantities should occur before tokenizing
+% formulas for var/aux
+for i=1:nFixed
+    thisLine=fixed(i).formula;
+    [tokens,types,ix]=TokenizeFromula(thisLine);
+    fixed(i).formulaToken=tokens;
+    fixed(i).tokenType=types;
+    fixed(i).tokenIx=ix;
+    
+end
+
 
 for i=1:nVar
     thisLine=var(i).formula;
@@ -602,14 +568,6 @@ for i=1:nVar
     end
 end
 
-for i=1:nFixed
-    thisLine=fixed(i).formula;
-    [tokens,types,ix]=TokenizeFromula(thisLine);
-    fixed(i).formulaToken=tokens;
-    fixed(i).tokenType=types;
-    fixed(i).tokenIx=ix;
-    
-end
 
 for i=1:nFunc
     % XPP doesn't care what the args are called, as long as rhs tokens are
@@ -666,6 +624,9 @@ xppdata.funcNames={func(:).name};
 xppdata.nAux=nAux;
 xppdata.auxNames={aux(:).name};
 
+xppdata.nWiener=nWiener;
+xppdata.WienerNames={wiener(:).name};
+
 %if we got to the end, then all formulas are valid!
 disp('All formulas are valid! Parsing Successful.')
 
@@ -679,21 +640,18 @@ disp('')
 % Nested helper functions
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    function [LHS, RHS] = ExtractFormula(string)
-        idx_Eq=find(string=='=');
-        
-        if length(idx_Eq)>1
-            disp(string)
-            error(['Too many "=" in ''' string '''' ])
+    function result=isValidName(name)
+        if any(strcmpi(name,userNames))
+            disp([num2str(lineCount) ': ' fullLine])
+            error('Error parsing ODE file: duplicate name')
+        elseif any(strcmpi(name,ReservedNames))
+            disp([num2str(lineCount) ': ' fullLine])
+            error('Error parsing ODE file: illegal name')
         end
-        
-        LHS=string(1:idx_Eq-1);
-        RHS=string(idx_Eq+1:end);
-        
-        LHS=LHS(~isspace(LHS));  %now we can safely remove spaces
-        RHS=RHS(~isspace(RHS));
+        result=true;
     end
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     function [tokens,types,ix] = TokenizeFromula(formula,arglist)
         %checks formula for internal consistency and then returns a list of
@@ -701,7 +659,7 @@ disp('')
         %of that type.
         
         %0=number, 1=simplemath, 2=mathname, 3=par, 4=fixed, 5=var,
-        %6=function, 7=function argument
+        %6=function, 7=function argument, 8=wiener
         
         if ~exist('arglist','var'), arglist={};end
         
@@ -740,138 +698,91 @@ disp('')
                 tokens{end+1}=str2double(tok); %converts string to a double
                 types(end+1)=0;
                 ix(end+1)=0;
+                j=j+1;
                 
             elseif ismember(tok,SimpleMathChars) %one of (,),-,+,*,/,^,<,>
                 tokens{end+1}=tok;
                 types(end+1)=1;
                 ix(end+1)=0;
+                j=j+1;
                 
-            elseif regexpi(tok,'[a-z]') %accumulate consecutive letters, allowing numeric and _ after the first one
+            elseif regexpi(tok,'[a-z]')
+                
+                %accumulate consecutive letters, allowing numeric and _ after the first one
                 while j<nLine && ~isempty(regexpi(formula(j+1),'[a-z_0-9]'))
                     tok=[tok, formula(j+1)];
                     j=j+1;
                 end
                 
+                tokens{end+1}=tok;
+                j=j+1;
                 
-                if ismember(tok,userNumNames)
-                    tokens{end+1}=tok;
+                [isTrue,thisIx]=ismember(tok,{num(:).name});
+                if isTrue
                     types(end+1)=0;
-                    [~,ix(end+1)]=ismember(tok,userNumNames);
+                    ix(end+1)=thisIx;
+                    continue;
+                end
                     
-                    
-                elseif ismember(tok,ReservedNames)
-                    tokens{end+1}=tok;
+                [isTrue,thisIx]=ismember(tok,ReservedNames);
+                if isTrue
                     types(end+1)=2;
-                    [~,ix(end+1)]=ismember(tok,ReservedNames);
+                    ix(end+1)=thisIx;
+                    continue;
+                end
                     
-                elseif ismember(tok,userParNames)
-                    tokens{end+1}=tok;
+                [isTrue,thisIx]=ismember(tok,{par(:).name});
+                if isTrue
                     types(end+1)=3;
-                    [~,ix(end+1)]=ismember(tok,userParNames);
-                    
-                elseif ismember(tok,userFixedNames)
-                    tokens{end+1}=tok;
+                    ix(end+1)=thisIx;
+                    continue;
+                end
+                      
+                [isTrue,thisIx]=ismember(tok,{fixed(:).name});
+                if isTrue
                     types(end+1)=4;
-                    [~,ix(end+1)]=ismember(tok,userFixedNames);
-                    
-                elseif ismember(tok,userVarNames)
-                    tokens{end+1}=tok;
+                    ix(end+1)=thisIx;
+                    continue;
+                end
+
+                [isTrue,thisIx]=ismember(tok,{var(:).name});
+                if isTrue
                     types(end+1)=5;
-                    [~,ix(end+1)]=ismember(tok,userVarNames);
-                    
-                elseif ismember(tok,userFuncNames)
-                    tokens{end+1}=tok;
+                    ix(end+1)=thisIx;
+                    continue;
+                end
+
+                [isTrue,thisIx]=ismember(tok,{func(:).name});
+                if isTrue
                     types(end+1)=6;
-                    [~,ix(end+1)]=ismember(tok,userFuncNames);
-                    
-                elseif ismember(tok,arglist)
-                    tokens{end+1}=tok;
+                    ix(end+1)=thisIx;
+                    continue;
+                end
+
+                [isTrue,thisIx]=ismember(tok,arglist);
+                if isTrue
                     types(end+1)=7;
-                    [~,ix(end+1)]=ismember(tok,arglist);
-                else
-                    %if we get this far, the name is not one we've found yet.
-                    disp(['---> ' tok ' in ' full_formula]);
-                    error('Error parsing ODE file: unknown name')
+                    ix(end+1)=thisIx;
+                    continue;
                 end
-            end
-            j=j+1;
-        end
-        
-    end
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-    function [parsed, numparsed] = ParseLine(full_line, type)
-        %type 0=par, 1=init, 2=opt
-        
-        parseddef.num = NaN;
-        parseddef.name = '';
-        parseddef.lb = [];
-        parseddef.ub = [];
-        parsed=parseddef;
-        thisL = full_line(isspace(full_line)==0); % get rid of whitespace
-        thisL = strrep(thisL,'=',' '); % convert = to space
-        thisL = strrep(thisL,',',' '); % convert , to space
-        numparsed = 0;
-        endofline = false;
-        
-        thisRest=thisL;
-        
-        while ~endofline
-            [nameStr, thisRest] = strtok(thisRest);
-            if isempty(nameStr)
-                endofline = true;
-                continue
-            end
-            
-            %         Check to make sure names are valid
-            if type<2 && any(strcmpi(nameStr,[userParNames, userFixedNames]))
-                disp([num2str(lineCount) ': ' full_line]);
-                error('Error parsing ODE file: duplicate name')
-            elseif type<2 && any(strcmpi(nameStr,ReservedNames))
-                disp([num2str(lineCount) ': ' full_line]);
-                error('Error parsing ODE file: use of reserved name')
-            end
-            
-            numparsed = numparsed + 1;
-            
-            nextTok = strtok(thisRest);
-            foundbrackets=any(nextTok=='[');
-            if foundbrackets
-                [numericValue,lb,ub,thisRest]=parseRangeToken(thisRest);
-            else
+                [isTrue,thisIx]=ismember(tok,{wiener(:).name});
+                if isTrue
+                    tokens{end+1}=tok;
+                    types(end+1)=8;
+                    ix(end+1)=thisIx;
+                    continue;
+                end
                 
-                [numStr, thisRest] = strtok(thisRest);
-                if isempty(numStr) || isempty(nameStr)
-                    disp([num2str(lineCount) ': ' full_line]);
-                    error('Param parse error: Parameter name or value missing!')
-                    parsed = parseddef;
-                    return
-                end
-                if ~isNumericLiteral(numStr(isspace(numStr)==0)) && type<2
-                    disp([num2str(lineCount) ': ' full_line]);
-                    error('Param parse error: Parameter value not a number!')
-                    parsed = parseddef;
-                    return
-                end
-                if  type<2
-                    numericValue=str2double(numStr);
-                else
-                    numericValue=numStr; %options are allowed to have char values
-                end
-            end
-            
-            parsed(numparsed).name = nameStr(isspace(nameStr)==0); % get rid of any whitespace
-            parsed(numparsed).num  = numericValue;
-            if foundbrackets
-                %                 parsed(numparsed).range = range;
-                parsed(numparsed).lb = lb;
-                parsed(numparsed).ub = ub;
+                %if we get this far, the name is not one we've found yet.
+                disp(['---> ' tok ' in ' full_formula]);
+                error('Error parsing ODE file: unknown name')
+                
             end
         end
         
     end
+
 
 
 end
@@ -879,6 +790,86 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % more helper functions, not nested
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+function [LHS, RHS] = ExtractFormula(string)
+    idx_Eq=find(string=='=');
+
+    if length(idx_Eq)>1
+        disp(string)
+        error(['Too many "=" in ''' string '''' ])
+    end
+
+    LHS=string(1:idx_Eq-1);
+    RHS=string(idx_Eq+1:end);
+
+    LHS=LHS(~isspace(LHS));  %now we can safely remove spaces
+    RHS=RHS(~isspace(RHS));
+end    
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+function [parsed, numparsed] = ParseLine(full_line, type, lineCount)
+    %type 0=par, 1=init, 2=opt, 3=wiener
+
+    parseddef.num = NaN;
+    parseddef.name = '';
+    parseddef.lb = [];
+    parseddef.ub = [];
+    parsed=parseddef;
+    thisL = full_line(isspace(full_line)==0); % get rid of whitespace
+    thisL = strrep(thisL,'=',' '); % convert = to space
+    thisL = strrep(thisL,',',' '); % convert , to space
+    numparsed = 0;
+    endofline = false;
+
+    thisRest=thisL;
+
+    while ~endofline
+        [nameStr, thisRest] = strtok(thisRest);
+        if isempty(nameStr)
+            endofline = true;
+            continue
+        end
+
+        numparsed = numparsed + 1;
+
+        nextTok = strtok(thisRest);
+        rangeBrackets=any(nextTok=='[');
+        if rangeBrackets
+            [numericValue,thislb,thisub,thisRest]=parseRangeToken(thisRest);
+        else
+            [numStr, thisRest] = strtok(thisRest);
+            if type~=3 && isempty(numStr) || isempty(nameStr)
+                disp([num2str(lineCount) ': ' full_line]);
+                error('Param parse error: Parameter name or value missing!')
+            end
+            if type==0 && ~isNumericLiteral(numStr(isspace(numStr)==0))
+                disp([num2str(lineCount) ': ' full_line]);
+                error('Param parse error: Parameter value not a number!')
+            end
+            if type==1 && ~isNumericLiteral(numStr(isspace(numStr)==0))
+                disp([num2str(lineCount) ': ' full_line]);
+                error('Init parse error: Initial value not a number!')
+            end
+            if  type<2
+                numericValue=str2double(numStr);
+            else
+                numericValue=numStr; %options are allowed to have char values
+            end
+        end
+
+        parsed(numparsed).name = nameStr(isspace(nameStr)==0); % get rid of any whitespace
+        parsed(numparsed).num  = numericValue;
+        if rangeBrackets
+            parsed(numparsed).lb = thislb;
+            parsed(numparsed).ub = thisub;
+        end
+    end
+
+end
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 function [num,lb,ub,restStr]=parseRangeToken(tok)
@@ -1008,8 +999,7 @@ RelationalOperations={'|', '>', '<', '==', '>=', '<=', '!=', 'not','&'}; %what a
 
 SimpleMathChars = {'+', '-', '/', '*', '^','(',')',','};
 
-ReservedclODE = {'t1','t2','npts','thry','thrdy','minamp'}; %will be removed....
-ReservedNames=[ReservedXPP, ReservedclODE, RelationalOperations];
+ReservedNames=[ReservedXPP, RelationalOperations];
 end
 
 
