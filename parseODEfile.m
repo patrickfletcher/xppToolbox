@@ -539,15 +539,6 @@ for i=1:nPar
 end
 
 
-% TODO: reordering of fixed quantities should occur before tokenizing
-% formulas for var/aux
-% for i=1:nFixed
-%     thisLine=fixed(i).formula;
-%     [tokens,types,ix]=TokenizeFromula(thisLine);
-%     fixed(i).formulaToken=tokens;
-%     fixed(i).tokenType=types;
-%     fixed(i).tokenIx=ix;
-% end
 i=1;
 while i<=nFixed
     thisLine=fixed(i).formula;
