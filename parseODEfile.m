@@ -541,13 +541,32 @@ end
 
 % TODO: reordering of fixed quantities should occur before tokenizing
 % formulas for var/aux
-for i=1:nFixed
+% for i=1:nFixed
+%     thisLine=fixed(i).formula;
+%     [tokens,types,ix]=TokenizeFromula(thisLine);
+%     fixed(i).formulaToken=tokens;
+%     fixed(i).tokenType=types;
+%     fixed(i).tokenIx=ix;
+% end
+i=1;
+while i<=nFixed
     thisLine=fixed(i).formula;
     [tokens,types,ix]=TokenizeFromula(thisLine);
+    
+    fixDeps=ix(types==4);
+    if ~isempty(fixDeps)
+        maxDep=max(fixDeps);
+        if maxDep>i
+            fixed=[fixed(1:i-1), fixed(i+1:maxDep), fixed(i), fixed(maxDep+1:end)];
+            continue
+        end
+    end
+    
     fixed(i).formulaToken=tokens;
     fixed(i).tokenType=types;
     fixed(i).tokenIx=ix;
     
+    i=i+1;
 end
 
 

@@ -30,7 +30,6 @@ wiener w
 inoise=sig*w
 
 c2=c*c
-vkdrive = v-vk
 
 minf=1/(1+exp((vm-v)/sm))
 ninf=1/(1+exp((vn-v)/sn))
@@ -42,6 +41,7 @@ ibk=gbk*f*vkdrive
 ik=gk*n*vkdrive
 il=gl*(v-vl)
 
+vkdrive = v-vk
 
 itot=ica+ isk + ibk + ik + il +inoise
 
