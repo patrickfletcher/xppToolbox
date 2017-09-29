@@ -541,8 +541,9 @@ end
 
 i=1;
 while i<=nFixed
-    thisLine=fixed(i).formula;
-    [tokens,types,ix]=TokenizeFromula(thisLine);
+    thisName=fixed(i).name;
+    thisFormula=fixed(i).formula;
+    [tokens,types,ix]=TokenizeFromula(thisName,thisFormula);
     
     fixDeps=ix(types==4);
     if ~isempty(fixDeps)
@@ -562,8 +563,9 @@ end
 
 
 for i=1:nVar
-    thisLine=var(i).formula;
-    [tokens,types,ix]=TokenizeFromula(thisLine);
+    thisName=var(i).name;
+    thisFormula=var(i).formula;
+    [tokens,types,ix]=TokenizeFromula(thisName,thisFormula);
     var(i).formulaToken=tokens;
     var(i).tokenType=types;
     var(i).tokenIx=ix;
@@ -586,16 +588,18 @@ for i=1:nFunc
     % problems (e.g. argname=y or p would crash .m file, since vector of
     % state variables and parameters are called y and p)
     
-    thisLine=func(i).formula;
-    [tokens,types,ix]=TokenizeFromula(thisLine,func(i).arg_names);
+    thisName=func(i).name;
+    thisFormula=func(i).formula;
+    [tokens,types,ix]=TokenizeFromula(thisName,thisFormula,func(i).arg_names);
     func(i).formulaToken=tokens;
     func(i).tokenType=types;
     func(i).tokenIx=ix;
 end
 
 for i=1:nAux
-    thisLine=aux(i).formula;
-    [tokens,types,ix]=TokenizeFromula(thisLine);
+    thisName=aux(i).name;
+    thisFormula=aux(i).formula;
+    [tokens,types,ix]=TokenizeFromula(thisName,thisFormula);
     aux(i).formulaToken=tokens;
     aux(i).tokenType=types;
     aux(i).tokenIx=ix;
@@ -663,7 +667,7 @@ disp('')
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    function [tokens,types,ix] = TokenizeFromula(formula,arglist)
+    function [tokens,types,ix] = TokenizeFromula(name,formula,arglist)
         %checks formula for internal consistency and then returns a list of
         %tokens, their types, and the index into list of all found elements
         %of that type.
@@ -782,9 +786,9 @@ disp('')
                     ix(end+1)=thisIx;
                     continue;
                 end
-                
+            else
                 %if we get this far, the name is not one we've found yet.
-                disp(['---> ' tok ' in ' full_formula]);
+                disp(['---> ' tok ' in line ' name '=' full_formula ]);
                 error('Error parsing ODE file: unknown name')
                 
             end
