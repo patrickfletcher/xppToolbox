@@ -7,7 +7,7 @@ odefilename='lactotroph.ode';
 
 %parameter values can be changed like so:
 p=xppdata.p0; %first get the default parameter vector
-p(strcmp(xppdata.parNames,'gbk'))=0.25; %change a value of interest
+p(strcmp(xppdata.parNames,'gbk'))=0.0; %change a value of interest
 
 
 %initial condition
@@ -32,3 +32,5 @@ figure(1)
 plot(t,y(:,varIx))
 xlabel('t')
 ylabel(xppdata.varNames(varIx))
+
+nsteps=length(t)
