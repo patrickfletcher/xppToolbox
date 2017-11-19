@@ -17,19 +17,23 @@ function h=plotxppaut1(filename,options)
 % columns: V>=8.0 {par, ymin, ymax, type, branch, 2-par type};
 % V<8.0 {par, ymin, ymax, type, branch}
 
+%TODO: use struct of arrays for lineprops -> index easily via type
+%TODO: plot by branch not type?
+%TODO: handle change in type: no gaps in lines..
+
 if ~exist('options','var')
     options=plotxppautset1();
 end
 nSubSample=options.nSubSample;
 
 %Colors -- SHOULD BE VALID MATLAB COLORS
-C=options.Colors;
+C=options.Color;
 
 %LineStyle -- SHOULD BE VALID MATLAB LINESTYLES
 Lt=options.LineStyle;
 
 %Linewidths
-Lw=options.Linewidths;
+Lw=options.Linewidth;
 
 %Marker
 M=options.Marker;
@@ -59,7 +63,10 @@ if(fid~=-1)
     
     temp=st';
     
-%     temp1=zeros(size(temp,1),8)*NaN;
+    x=nan(size(temp,1),4);
+    y=nan(size(temp,1),4);
+    ymin=nan(size(temp,1),2);
+    ymax=nan(size(temp,1),2);
     
     type1=temp(:,4)==1;
     type2=temp(:,4)==2;
