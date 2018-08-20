@@ -911,7 +911,7 @@ function result = isNumericLiteral(data)
 % parameter `data` is a string
 result = false;
 pointCount = 0;
-num = [char(48:57),'.','-','e'];
+num = [char(48:57),'.','-','e','E'];
 for j=1:length(data)
     if data(j) == '.'
         pointCount = pointCount + 1;
@@ -927,11 +927,11 @@ for j=1:length(data)
     if data(j)=='-'
         if j==length(data) %'-' or '21-' are not num
             return %false
-        elseif j>1 && data(j-1)~='e'
+        elseif j>1 && data(j-1)~='e' && data(j-1)~='E'
             return %false
         end
     end
-    if data(j)=='e'
+    if data(j)=='e' || data(j)=='E'
         if j==1||j==length(data) %'e' is not allowed as first/last
             return %false
         end

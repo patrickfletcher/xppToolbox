@@ -280,11 +280,7 @@ end
                     tok=num(tokenIx(j)).value;
                 end
                 
-                %specify format
-                tok=sprintf('%f',tok);
-                %remove trailing zeros
-                tok=tok(1:find(tok~='0',1,'last'));
-                tok=[tok,'0'];
+                tok=sprintf('%g',tok);
                 tok=['(' tok ')'];
                 
             elseif tokenType(j)==1 %simple math
