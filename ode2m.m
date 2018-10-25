@@ -222,7 +222,9 @@ end
                 end
                 
                 %remove trailing zeros
-                tok=sprintf('%g',tok);
+                tok=sprintf('%g',tok);                
+%                 tok=tok(1:find(tok~='0',1,'last'));
+%                 tok=[tok,'0'];
                 tok=['(' tok ')'];
                 
             elseif tokenType(j)==1 %simple math

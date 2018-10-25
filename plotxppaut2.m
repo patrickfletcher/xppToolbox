@@ -50,7 +50,7 @@ Mfc=options.MarkerFaceColor;
 
 fid = fopen(filename,'rt');
 
-h=[];
+% h=[];
 
 if(fid~=-1)
     
@@ -66,15 +66,15 @@ if(fid~=-1)
     
     
     temp=st';
-    branch=temp(:,5);
-    [ubr, ubrix]=unique(branch);
+    branch=[temp(:,5),temp(:,6)];
+    [ubr, ubrix]=unique(branch,'rows','stable');
     
     twopartype=temp(:,6);
     
     %%% plot each branch, line properties set according to type
-    for i=1:length(ubr)
+    for i=1:size(ubr,1)
         thistype=twopartype(ubrix(i));
-        thisbr=branch==ubr(i);
+        thisbr=branch(:,1)==ubr(i,1)&branch(:,2)==ubr(i,2);
         thisbrix=find(thisbr);
         
         xx=temp(thisbrix(1:nSubSample(thistype):end),1);

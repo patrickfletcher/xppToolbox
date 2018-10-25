@@ -280,6 +280,7 @@ end
                     tok=num(tokenIx(j)).value;
                 end
                 
+                %specify format
                 tok=sprintf('%g',tok);
                 tok=['(' tok ')'];
                 
@@ -452,9 +453,9 @@ end
 function output_file=BuildOutputFileMEX(xppdata,cSinglePrecision)
 
 if cSinglePrecision
-    numFormat='%0.7f'; %7 digits, single precision floating point
+    numFormat='%0.7g'; %7 digits, single precision floating point TODO: check correctness
 else
-    numFormat='%0.14f'; %14 digits, double precision floating point
+    numFormat='%0.14g'; %14 digits, double precision floating point
 end
 
 if xppdata.nWiener>0
@@ -608,8 +609,8 @@ end
                 %specify format
                 tok=sprintf(numFormat,tok);
                 %remove trailing zeros
-                tok=tok(1:find(tok~='0',1,'last'));
-                tok=[tok,'0'];
+%                 tok=tok(1:find(tok~='0',1,'last'));
+%                 tok=[tok,'0'];
                 
                 if cSinglePrecision %add an f to indicate single precision
                     tok=[tok,'f'];
@@ -730,9 +731,9 @@ end
 function output_file=BuildOutputFileCL(xppdata,cSinglePrecision)
 
 if cSinglePrecision
-    numFormat='%0.7f'; %7 digits, single precision floating point
+    numFormat='%0.7g'; %7 digits, single precision floating point TODO: check correctness
 else
-    numFormat='%0.14f'; %14 digits, double precision floating point
+    numFormat='%0.14g'; %14 digits, double precision floating point
 end
 
 num=xppdata.num;
@@ -872,8 +873,8 @@ output_file{end+1}='';
                 %specify format
                 tok=sprintf(numFormat,tok);
                 %remove trailing zeros
-                tok=tok(1:find(tok~='0',1,'last'));
-                tok=[tok,'0'];
+%                 tok=tok(1:find(tok~='0',1,'last'));
+%                 tok=[tok,'0'];
                 
                 if cSinglePrecision %add an f to indicate single precision
                     tok=[tok,'f'];
