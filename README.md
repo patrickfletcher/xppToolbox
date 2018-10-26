@@ -30,4 +30,4 @@ Functions `plotxppaut1` and `plotxppaut2` read and plot one- or two-parameter bi
 
 `plotnullclines` reads data saved from XPP's nullcline menu and plots them in Matlab. The x and y nullcline appearance can be controlled using Matlab's line properties.
 
-Inspired by PlotXppaut by Mohammad S. Imtiaz, which can be found on the [XPPaut website](http://www.math.pitt.edu/~bard/xpp/xpp.html)
+Inspired by PlotXppaut by Mohammad S. Imtiaz, which can be found on the [XPPAUT website](http://www.math.pitt.edu/~bard/xpp/xpp.html)
