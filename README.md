@@ -16,7 +16,7 @@ A parser for XPP files, and code generation tools. `parseODEfile` reads an ODE f
 * XML file compatible with [VFGEN](http://www.warrenweckesser.net/vfgen/). Use `ode2vfgen`
 * VCML file compatible with the ODE mode of [Virtual Cell](http://vcell.org/). Use `ode2vcml`
 
-These tools can be used alone, or via the `xppConverter` convenience routine.
+These tools can be used alone, or via the `xppConverter` convenience routine. NOTE: several features that XPPAUT offers are supported but not all. You'll get an error message for keywords that haven't yet been implemented - let me know if your favorite one is missing!
 
 A novel syntax can be used in the ODE file to specify a range of values for a parameter or initial condition. Simply append a set of square brackets with the low and high value of the range separated by a comma: `par p1=2.0[1.0,3.0]`. The XPPaut parser ignores this, but note that it seems to append the digits following preceding the comma into the parameter value, which is undesireable. This syntax should be used only with the Matlab parser.
 
