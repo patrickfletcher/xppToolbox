@@ -1,4 +1,4 @@
-function [destinationFile, xppdata]=ode2m(source, destinationFile)
+function [destinationFile, xppdata]=ode2m(source, destinationFile,verbose)
 % code conversion from ODE file for XPP to a .m file that can be run with
 % MatLab. Calls parseODEfile, writes the ODE information to a .m file,
 % then packages the secondary parameters into a vector pars. Also produced
@@ -11,8 +11,11 @@ function [destinationFile, xppdata]=ode2m(source, destinationFile)
 % Inputs
 %   none - will prompt for ODE file, write to same name .m in working dir
 %   source: either full path to ODE file, or pre-generated xppdata struct
-%   from parser
-%   destinationFile: specified output filename
+%           from parseODEfile 
+%   destinationFile: specified output filename. if omitted, a default will be generated based on the
+%                    source filename
+%   verbose {true}/false - toggle display of information in the console
+%
 %
 % Outputs
 %   mFileName: string conatining the destination filename without extension
@@ -22,10 +25,16 @@ function [destinationFile, xppdata]=ode2m(source, destinationFile)
 %   [mFunctionName,p,y0]=ode2m('./xppSrc/lactotroph.ode');
 %   fun=eval(['@(t,y)' mFunctionName '(t,y,p)']);
 %   ode45(fun,[0,1000],y0);
+%
+%
 
 %TO DO
 % - destination file overwriting behavior? now destroys any existing copy
 % - don't use symbolic toolbox heaviside!!
+
+if ~exist('verbose','var')
+    verbose=true;
+end
 
 fileExtension='m';
 
@@ -90,20 +99,38 @@ while ~ready
     end
 end
 
-%give suggestions on which matlab solver to try based on the method option
-%detected. TODO: expand this with a better understanding of exactly which
-%solvers XPP is using!
-
-% if ~isempty(XPPopt.method)
-%     switch XPPopt.method
-%         case {'runge','rungekutta','modeuler','5dp','83dp'}
-%             disp('Try ode45')
-%         case {'backeuler','gear','stiff','cvode'}
-%             disp('Try ode15s')
-%         case '2rb'
-%             disp('Try ode23s')
-%     end
-% end
+%summary information
+if verbose
+    disp('Found:')
+    disp([num2str(xppdata.nVar) ' variables'])
+    disp([num2str(xppdata.nPar) ' parameters'])
+    disp([num2str(xppdata.nNum) ' numbers'])
+    disp([num2str(xppdata.nFixed) ' fixed quantities'])
+    disp([num2str(xppdata.nFunc) ' functions'])
+    disp([num2str(xppdata.nWiener) ' Wiener variables'])
+    disp([num2str(xppdata.nAux) ' auxiliary variables'])
+    
+    %give suggestions on which matlab solver to try based on the method option
+    %detected. TODO: expand this with a better understanding of exactly which
+    %solvers XPP is using!
+    if xppdata.nWiener>0
+        methodHint=['Wiener variables detected. Use ode_euler'];
+    elseif ~isempty(xppdata.opt.method)
+        methodHint=['XPP method option was set to: ' xppdata.opt.method '. '];
+        switch xppdata.opt.method
+            case {'euler'}
+                methodHint=[methodHint, 'Try ode_euler'];
+            case {'runge','rungekutta','modeuler','5dp','83dp'}
+                methodHint=[methodHint, 'Try ode45'];
+            case {'backeuler','gear','stiff','cvode'}
+                methodHint=[methodHint, 'Try ode15s'];
+            case '2rb'
+                methodHint=[methodHint, 'Try ode23s'];
+        end
+    end
+    disp(methodHint)
+    
+end
 
 end
 

@@ -57,6 +57,6 @@ aux ica=ica
 @ maxstor=20000000, bounds=10000000
 @ xp=t, yp=v
 @ xlo=0, xhi=5000, ylo=-75, yhi=0
-@ method=Runge
+@ method=Euler
 @ bell=0
 done
