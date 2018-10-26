@@ -116,7 +116,7 @@ if verbose
     if xppdata.nWiener>0
         methodHint=['Wiener variables detected. Use ode_euler'];
     elseif ~isempty(xppdata.opt.method)
-        methodHint=['XPP method option was set to: ' xppdata.opt.method '. '];
+        methodHint=['XPP method option was set to ' xppdata.opt.method '. '];
         switch xppdata.opt.method
             case {'euler'}
                 methodHint=[methodHint, 'Try ode_euler'];

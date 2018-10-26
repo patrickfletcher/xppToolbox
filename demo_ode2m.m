@@ -21,18 +21,34 @@ total=xppdata.opt.total;
 
 %% call matlab solver
 if xppdata.nWiener==0
+    
     %define the RHS anonymous function in matlab - must be done *after* changing any parameters of interest
     odefun=eval(['@(t,y) ' mFunctionName '(t,y,p)']);
     [t,y]=ode45(odefun,[0,total],y0);
+    
+    %compute the auxiliary variables (if not using ode_euler)
+    aux=zeros(length(t),xppdata.nAux);
+    for i=1:length(t)
+        [~,tmp]=odefun(t(i),y(i,:));
+        aux(i,:)=tmp';
+    end
+
 else
     odefun=eval(['@(t,y,w) ' mFunctionName '(t,y,w,p)']);
-    [t,y]=ode_euler(odefun,[0,total],dt,y0,xppdata.nWiener);
+    [t,y,dy,aux,w]=ode_euler(odefun,[0,total],dt,y0,xppdata.nWiener);
+    %w is the sequence of random normals used in the simulation
 end
 
-% plot result
-varIx=1;
 
+% plot result
 figure(1)
-plot(t,y(:,varIx))
+var=varNames=="v";
+plot(t,y(:,var))
 xlabel('t')
-ylabel(varNames(varIx))
+ylabel(varNames(var))
+
+figure(2)
+auxNames=xppdata.auxNames;
+plot(t,aux(:,1))
+xlabel('t')
+ylabel(auxNames(1))

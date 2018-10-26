@@ -29,6 +29,8 @@ p sig=2
 wiener w
 inoise=sig*w
 
+#inoise=0
+
 c2=c*c
 
 minf=1/(1+exp((vm-v)/sm))
