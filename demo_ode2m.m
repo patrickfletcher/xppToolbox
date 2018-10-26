@@ -3,21 +3,23 @@ clear
 
 odefilename='lactotroph.ode';
 
-[mFunctionName, xppdata]=xppConverter(odefilename);
+[mFunctionName, xppdata]=ode2m(odefilename);
 
 %parameter values can be changed like so:
 p=xppdata.p0; %first get the default parameter vector
-p(strcmp(xppdata.parNames,'gbk'))=0.0; %change a value of interest
+parNames=xppdata.parNames;
 
+p(parNames=="gbk")=0.0; %change a value of interest
 
 %initial condition
 y0=xppdata.x0;
+varNames=xppdata.varNames;
 
 total=xppdata.opt.total;
 
 %% call matlab solver
 if xppdata.nWiener==0
-    %define the RHS anonymous function in matlab
+    %define the RHS anonymous function in matlab - must be done *after* changing any parameters of interest
     odefun=eval(['@(t,y) ' mFunctionName '(t,y,p)']);
     [t,y]=ode45(odefun,[0,total],y0);
 else
@@ -31,6 +33,4 @@ varIx=1;
 figure(1)
 plot(t,y(:,varIx))
 xlabel('t')
-ylabel(xppdata.varNames(varIx))
-
-nsteps=length(t)
+ylabel(varNames(varIx))

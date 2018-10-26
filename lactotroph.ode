@@ -25,7 +25,7 @@ n ff=0.01
 n alpha=0.0015
 n ks=0.4
 
-p sig=1
+p sig=2
 wiener w
 inoise=sig*w
 

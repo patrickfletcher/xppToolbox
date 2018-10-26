@@ -2,7 +2,7 @@ function xppdata=parseODEfile(filename)
 %reads an xpp file, storing all information found. This version also
 %accepts non-XPP range syntax introduced by Patrick Fletcher
 %
-% Output: Initial Value Struct (ivp) containing substructs:
+% Output: xppdata, a struct containing the following structs:
 %       par - parameter information (may be modified)
 %           par.name, par.value, par.lb, par.ub
 %           (XPP: p* name = val)
@@ -34,9 +34,6 @@ function xppdata=parseODEfile(filename)
 % TODO
 %
 % Add help section about functions func(arg1,arg2,...)=formula
-%
-% - second pass through all fixed quantities: reorder so they can be
-% evaluated sequentially (for matlab/cl)
 %
 %  Add support for more XPP functionalities
 %   - table - tables/interpolation [two versions: file, function]
@@ -545,6 +542,7 @@ while i<=nFixed
     thisFormula=fixed(i).formula;
     [tokens,types,ix]=TokenizeFromula(thisName,thisFormula);
     
+    %reorder fixed formulas based on dependencies of the right hand side
     fixDeps=ix(types==4);
     if ~isempty(fixDeps)
         maxDep=max(fixDeps);

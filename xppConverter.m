@@ -23,7 +23,7 @@ function [destinationFile, xppdata]=xppConverter(sourceFile, destinationType, de
 %   fun=eval(['@(t,y)' mFunctionName '(t,y,p)']);
 %   ode45(fun,[0,1000],y0);
 
-%TO DO
+%TODO
 % - refactor buildOutputFile subroutines: extract common functionality as
 % single subroutines that can be called by any of them instead of nested
 % subroutines for each.
