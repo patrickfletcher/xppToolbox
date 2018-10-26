@@ -15,6 +15,8 @@ p(parNames=="gbk")=0.0; %change a value of interest
 y0=xppdata.x0;
 varNames=xppdata.varNames;
 
+%access XPP options that were found in the ODE file
+dt=xppdata.opt.dt; 
 total=xppdata.opt.total;
 
 %% call matlab solver
@@ -24,7 +26,7 @@ if xppdata.nWiener==0
     [t,y]=ode45(odefun,[0,total],y0);
 else
     odefun=eval(['@(t,y,w) ' mFunctionName '(t,y,w,p)']);
-    [t,y]=ode_euler(odefun,[0,total],0.5,y0,xppdata.nWiener);
+    [t,y]=ode_euler(odefun,[0,total],dt,y0,xppdata.nWiener);
 end
 
 % plot result
