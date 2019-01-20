@@ -113,6 +113,7 @@ if verbose
     %give suggestions on which matlab solver to try based on the method option
     %detected. TODO: expand this with a better understanding of exactly which
     %solvers XPP is using!
+    methodHint='';
     if xppdata.nWiener>0
         methodHint=['Wiener variables detected. Use ode_euler'];
     elseif ~isempty(xppdata.opt.method)
