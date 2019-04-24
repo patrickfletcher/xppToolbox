@@ -42,7 +42,13 @@ function xppdata=parseODEfile(filename)
 %
 %  CHECK all the reserved math and XPP words. Must either support them or
 %  throw an error
-
+%
+%  Switch to using switch/case for different types of tokens (or enums)
+%
+%  Put things into better organization of subrountines to make main
+%  function more clear
+%
+%
 
 % Input check
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -83,7 +89,8 @@ fixed=struct('name',{},'formula',{},'formulaToken',{},'tokenType',{},'tokenIx',{
 func=struct('name',{},'full_arglist',{},'arg_names',{},'formula',{},'formulaToken',{},'tokenType',{},'tokenIx',{});
 aux=struct('name',{},'formula',{},'formulaToken',{},'tokenType',{},'tokenIx',{});
 wiener=struct('name',{});
-XPPopt=setXPPopt();
+% XPPopt=setXPPopt();
+opt=struct('name',{},'value',{});
 comment=struct('text',{});
 
 userNames={}; %set of all user defined names found
@@ -219,7 +226,9 @@ while ~file_done
         if strcmpi(token(1),'@')
             [parsed, numparsed] = ParseLine(rest,2,lineCount);
             for i=1:numparsed
-                XPPopt=setXPPopt(XPPopt,parsed(i).name, parsed(i).num);
+%                 XPPopt=setXPPopt(XPPopt,parsed(i).name, parsed(i).num);
+                opt(end+1).name=parsed(i).name;
+                opt(end).value=parsed(i).num;
             end
             
             continue
@@ -525,6 +534,7 @@ nFixed=length(fixed);
 nFunc=length(func);
 nAux=length(aux);
 nWiener=length(wiener);
+nOpt=length(opt);
 
 for i=1:nPar
     if isempty(par(i).lb)
@@ -611,7 +621,7 @@ xppdata.var=var;
 xppdata.fixed=fixed;
 xppdata.func=func;
 xppdata.aux=aux;
-xppdata.opt=XPPopt;
+xppdata.opt=opt;
 xppdata.comment=comment;
 
 %convenience outputs
@@ -638,6 +648,10 @@ xppdata.auxNames={aux(:).name};
 
 xppdata.nWiener=nWiener;
 xppdata.WienerNames={wiener(:).name};
+
+xppdata.nOpt=nOpt;
+xppdata.optNames={opt(:).name};
+xppdata.optVals=[opt(:).value];
 
 %if we got to the end, then all formulas are valid!
 disp('All formulas are valid! Parsing Successful.')

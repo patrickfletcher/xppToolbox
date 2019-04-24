@@ -114,11 +114,15 @@ if verbose
     %detected. TODO: expand this with a better understanding of exactly which
     %solvers XPP is using!
     methodHint='';
+    xppmethod=xppdata.opt(strcmp({xppdata.opt(:).name},'meth')).value;
     if xppdata.nWiener>0
         methodHint=['Wiener variables detected. Use ode_euler'];
-    elseif ~isempty(xppdata.opt.method)
-        methodHint=['XPP method option was set to ' xppdata.opt.method '. '];
-        switch xppdata.opt.method
+%     elseif ~isempty(xppdata.opt.method)
+%         methodHint=['XPP method option was set to ' xppdata.opt.method '. '];
+%         switch xppdata.opt.method
+    elseif ~isempty(xppmethod)
+        methodHint=['XPP method option was set to ' xppmethod '. '];
+        switch xppmethod
             case {'euler'}
                 methodHint=[methodHint, 'Try ode_euler'];
             case {'runge','rungekutta','modeuler','5dp','83dp'}
@@ -174,23 +178,24 @@ for i=1:xppdata.nFunc
     
     name=func(i).name; %case is all lower after parser (XPP is case insensitive)
     
-    %rename the arg list
-    num_args=length(func(i).arg_names);
-    arglist=[];
-    for k=1:num_args
-        func(i).tokenType(strcmpi(func(i).formulaToken,func(i).arg_names(k)))=7;
-        func(i).arg_names{k}=['arg',num2str(k)];
-        arglist=[arglist,'arg',num2str(k),','];
-    end
-    arglist=arglist(1:end-1); %remove last comma
-    
-    func(i).full_arglist=arglist;
+%     %rename the arg list
+%     num_args=length(func(i).arg_names);
+%     arglist=[];
+%     for k=1:num_args
+%         func(i).tokenType(strcmpi(func(i).formulaToken,func(i).arg_names(k)))=7;
+%         func(i).arg_names{k}=['arg',num2str(k)];
+%         arglist=[arglist,'arg',num2str(k),','];
+%     end
+%     arglist=arglist(1:end-1); %remove last comma
+%     
+%     func(i).full_arglist=arglist;
     
     tokens=func(i).formulaToken(:);
     tokenType=func(i).tokenType;
     tokenIx=func(i).tokenIx;
-    thisFormula=buildFormula(tokens,tokenType,tokenIx,func(i));
-    output_file{end+1}=[name '=@(' func(i).full_arglist ') '  thisFormula ';'];
+%     thisFormula=buildFormula(tokens,tokenType,tokenIx,func(i));
+%     output_file{end+1}=[name '=@(' func(i).full_arglist ') '  thisFormula ';'];
+    output_file{end+1}=[name '=@(' func(i).full_arglist ') '   func(i).formula ';'];
 end
 
 for i=1:xppdata.nFixed
