@@ -557,7 +557,8 @@ while i<=nFixed
     if ~isempty(fixDeps)
         maxDep=max(fixDeps);
         if maxDep>i
-            fixed=[fixed(1:i-1), fixed(i+1:maxDep), fixed(i), fixed(maxDep+1:end)];
+            fixed=[fixed(1:i-1),fixed(maxDep),fixed(i:maxDep-1), fixed(maxDep+1:end)]; %move the worst dependency up 
+%             fixed=[fixed(1:i-1), fixed(i+1:maxDep), fixed(i), fixed(maxDep+1:end)]; %move this below its latest depenency
             continue
         end
     end
