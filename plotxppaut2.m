@@ -1,4 +1,4 @@
-function h=plotxppaut2(filename,options)
+function h=plotxppaut2(arg1,options)
 % plotxppaut2 Plot two-parameter bifurcation diagrams generated in XPPAUT.
 % Generate the data file data file using XPPAUT's Auto/File/write points
 % option.
@@ -24,6 +24,8 @@ function h=plotxppaut2(filename,options)
 %TODO: confirm point types
 %TODO: MORE INTUITIVE options struct, for each type of branch, set linespec - e.g. 'SNP','-ro'
 
+%TODO: support "allinfo" too
+
 if ~exist('options','var')
     options=plotxppautset2();
 end
@@ -48,47 +50,49 @@ Ms=options.Markersize;
 Mfc=options.MarkerFaceColor;
 
 
-fid = fopen(filename,'rt');
-
-% h=[];
-
-if(fid~=-1)
-    
-    %determine if old or new format
-    %src: https://www.mathworks.com/matlabcentral/answers/54236-find-number-of-columns-on-text-file
-    
-    delimiter = ' '; %or whatever
-    tLines = fgets(fid);
-    numCols = numel(strfind(tLines,delimiter)) + 1;
-    
-    st = fscanf(fid,'%f',[numCols,inf]); %in Xpp version 8 - col 6 stores type of Two-par curves
-    fclose(fid);
-    
-    
-    temp=st';
-    branch=[temp(:,5),temp(:,6)];
-    [ubr, ubrix]=unique(branch,'rows','stable');
-    
-    twopartype=temp(:,6);
-    
-    %%% plot each branch, line properties set according to type
-    for i=1:size(ubr,1)
-        thistype=twopartype(ubrix(i));
-        thisbr=branch(:,1)==ubr(i,1)&branch(:,2)==ubr(i,2);
-        thisbrix=find(thisbr);
-        
-        xx=temp(thisbrix(1:nSubSample(thistype):end),1);
-        yy=temp(thisbrix(1:nSubSample(thistype):end),2);
-        
-        h(i)=line(xx,yy);
-        
-        setLineProps(h(i),thistype)
-        
-    end
-    
-    
+if isnumeric(arg1)
+    data=arg1(:,1:min(size(arg1,2),6)); %in Xpp version 8 - col 6 stores type of Two-par curves
 else
-    error(['Could not open file: ' filename ])
+    fid = fopen(arg1,'rt');
+
+    % h=[];
+
+    if(fid~=-1)
+        %determine if old or new format
+        %src: https://www.mathworks.com/matlabcentral/answers/54236-find-number-of-columns-on-text-file
+        delimiter = ' '; %or whatever
+        tLines = fgets(fid);
+        numCols = numel(strfind(tLines,delimiter)) + 1;
+
+        data = fscanf(fid,'%f',[inf,numCols]); %in Xpp version 8 - col 6 stores type of Two-par curves
+        fclose(fid);
+    else
+        error(['Could not open file: ' arg1 ])
+    end
+end
+    
+branch=[data(:,5),data(:,6)];
+[ubr, ubrix]=unique(branch,'rows','stable');
+
+twopartype=data(:,6);
+
+%%% plot each branch, line properties set according to type
+for i=1:size(ubr,1)
+    thistype=twopartype(ubrix(i));
+    thisbr=branch(:,1)==ubr(i,1)&branch(:,2)==ubr(i,2);
+    thisbrix=find(thisbr);
+
+    xx=data(thisbrix(1:nSubSample(thistype):end),1);
+    yy=data(thisbrix(1:nSubSample(thistype):end),2);
+
+    h(i)=line(xx,yy);
+
+    setLineProps(h(i),thistype)
+
+end
+
+if nargout==0
+    clear h
 end
 
 function setLineProps(line_handle,thisType)
