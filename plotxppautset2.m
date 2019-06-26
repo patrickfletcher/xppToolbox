@@ -47,10 +47,10 @@ names = lower(Names);
 %Color -- SHOULD BE VALID MATLAB Color
 options.Color.SN = 'k';   %saddle node
 options.Color.SNP = 'k';   %saddle node of periodics
-options.Color.HB = 'r';   %hopf bifurcation
-options.Color.uk1 = 'b';   %
-options.Color.uk2 = 'b';   %
-options.Color.uk3 = 'b';   %
+options.Color.HB = 'b';   %hopf bifurcation
+options.Color.uk1 = 'r';   %
+options.Color.uk2 = [0.1,0.7,0.9];   %
+options.Color.uk3 = [0.9,0.8,0.1];   %PD
 options.Color.FP = 'b';   %fixed period
 
 %LineStyle -- SHOULD BE VALID MATLAB LINESTYLES
