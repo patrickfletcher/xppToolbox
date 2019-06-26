@@ -1,11 +1,11 @@
-function odewriter(srcfilename, destinationFile)
+function odewriter(srcfilename, destinationFile, sortmethod)
 % read ode write new ode (with options for sorting pars/vars/fixed/etc)
 
 %parser already re-orders fixed quantities so they are always defined
 %before use.
 
 % sortmethod='alpha';
-sortmethod='none'; %xpp is sensitive to order of equations...
+% sortmethod='none'; %xpp is sensitive to order of equations...
 
 fileExtension='ode';
 
