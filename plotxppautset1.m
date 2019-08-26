@@ -49,19 +49,19 @@ names = lower(Names);
 %defaults
 
 %Colors -- SHOULD BE VALID MATLAB COLORS
-options.Color.Ss = 'k';   %STABLE STEADY STATE
+options.Color.Ss = 'r';   %STABLE STEADY STATE
 options.Color.Us = 'k';   %UNSTABLE STEADY STATE
-options.Color.Sp = 'r';     %STABLE PERIODIC ORBIT
+options.Color.Sp = 'g';     %STABLE PERIODIC ORBIT
 options.Color.Up = 'b';    %UNSTABLE PERIODIC ORBIT
 
 %LineStyle -- SHOULD BE VALID MATLAB LINESTYLES
 options.LineStyle.Ss = '-';    %STABLE STEADY STATE
-options.LineStyle.Us = '--';   %UNSTABLE STEADY STATE
+options.LineStyle.Us = '-';   %UNSTABLE STEADY STATE
 options.LineStyle.Sp = 'none';    %STABLE PERIODIC ORBIT
 options.LineStyle.Up = 'none';    %UNSTABLE PERIODIC ORBIT
 
 %Linewidths
-options.Linewidth.Ss = 1.5;   %STABLE STEADY STATE
+options.Linewidth.Ss = 2;   %STABLE STEADY STATE
 options.Linewidth.Us = 1;     %UNSTABLE STEADY STATE
 options.Linewidth.Sp = 1;     %STABLE PERIODIC ORBIT
 options.Linewidth.Up = 1;     %UNSTABLE PERIODIC ORBIT
@@ -69,14 +69,14 @@ options.Linewidth.Up = 1;     %UNSTABLE PERIODIC ORBIT
 %Markersize
 options.Marker.Ss = 'none';    %STABLE STEADY STATE
 options.Marker.Us = 'none';    %UNSTABLE STEADY STATE
-options.Marker.Sp = 'o';    %STABLE PERIODIC ORBIT
-options.Marker.Up = '.';    %UNSTABLE PERIODIC ORBIT
+options.Marker.Sp = '.';    %STABLE PERIODIC ORBIT
+options.Marker.Up = 'o';    %UNSTABLE PERIODIC ORBIT
 
 %Markersize
-options.Markersize.Ss = 2;    %STABLE STEADY STATE
-options.Markersize.Us = 2;    %UNSTABLE STEADY STATE
-options.Markersize.Sp = 3;    %STABLE PERIODIC ORBIT
-options.Markersize.Up = 3;    %UNSTABLE PERIODIC ORBIT
+options.Markersize.Ss = 1;    %STABLE STEADY STATE
+options.Markersize.Us = 1;    %UNSTABLE STEADY STATE
+options.Markersize.Sp = 5;    %STABLE PERIODIC ORBIT
+options.Markersize.Up = 5;    %UNSTABLE PERIODIC ORBIT
 
 %MarkerFaceColor -- SHOULD BE VALID MATLAB COLORS
 options.MarkerFaceColor.Ss = 'none';   %STABLE STEADY STATE
