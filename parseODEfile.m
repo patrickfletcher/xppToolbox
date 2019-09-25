@@ -652,7 +652,7 @@ xppdata.WienerNames={wiener(:).name};
 
 xppdata.nOpt=nOpt;
 xppdata.optNames={opt(:).name};
-xppdata.optVals=[opt(:).value];
+% xppdata.optVals=[opt(:).value]; %
 
 %if we got to the end, then all formulas are valid!
 disp('All formulas are valid! Parsing Successful.')
