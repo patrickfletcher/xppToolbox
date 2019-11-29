@@ -172,8 +172,8 @@ end
 % end
 
 %main body of RHS file
-output_file{end+1}=['void getRHS(realtype t, realtype ' ...
-    stateName '[], realtype ' paramName '[], realtype ' slopeName '[], realtype ' auxName '[], realtype ' wienerName '[]) {'];
+output_file{end+1}=['void getRHS(const realtype t, const realtype ' ...
+    stateName '[], const realtype ' paramName '[], realtype ' slopeName '[], realtype ' auxName '[], const realtype ' wienerName '[]) {'];
 
 for i=1:xppdata.nFixed
     
