@@ -53,12 +53,13 @@ else
         
         %determine if old or new format
         %src: https://www.mathworks.com/matlabcentral/answers/54236-find-number-of-columns-on-text-file
-        
-        delimiter = ' '; %or whatever
+        delimiter = ' ';
         tLines = fgets(fid);
         numCols = numel(strfind(tLines,delimiter)) + 1;
         
-        data = fscanf(fid,'%f',[inf,numCols]); %in Xpp version 8 - col 6 stores type of Two-par curves
+        data = fscanf(fid,'%f');
+        data=reshape(data,[length(data)/numCols,numCols]);
+        
         fclose(fid);
         
         
