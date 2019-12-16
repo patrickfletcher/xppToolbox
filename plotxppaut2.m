@@ -60,28 +60,21 @@ else
     if(fid~=-1)
         %determine if old or new format
         %src: https://www.mathworks.com/matlabcentral/answers/54236-find-number-of-columns-on-text-file
-        delimiter = ' ';
+        delimiter = ' '; %or whatever
         tLines = fgets(fid);
-        numCols = numel(strfind(tLines,delimiter)) + 1; %in Xpp version 8 - col 6 stores type of Two-par curves
+        numCols = numel(strfind(tLines,delimiter)) + 1;
 
-        data = fscanf(fid,'%f');
-        data=reshape(data,[length(data)/numCols,numCols]);
-        
+        data = fscanf(fid,'%f',[inf,numCols]); %in Xpp version 8 - col 6 stores type of Two-par curves
         fclose(fid);
     else
         error(['Could not open file: ' arg1 ])
     end
 end
-
-if numCols==6
-    twopartype=data(:,6);
-elseif numCols<6
-    twopartype=ones(size(data,1),1);
-end
-
-branch=[data(:,5),twopartype];
+    
+branch=[data(:,5),data(:,6)];
 [ubr, ubrix]=unique(branch,'rows','stable');
 
+twopartype=data(:,6);
 
 %%% plot each branch, line properties set according to type
 for i=1:size(ubr,1)
