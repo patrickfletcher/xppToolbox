@@ -282,9 +282,9 @@ output_file{end+1}='';
                         tok='fmod';
                         
                     case 'pi'
-                        if strcmpi(precision,'single')
+                        if clSinglePrecision
                             tok='M_PI_F';
-                        elseif strcmpi(precision,'double')
+                        else
                             tok='M_PI';
                         end
                         
