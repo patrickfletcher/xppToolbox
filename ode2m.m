@@ -114,7 +114,7 @@ if verbose
     %detected. TODO: expand this with a better understanding of exactly which
     %solvers XPP is using!
     methodHint='';
-    xppmethod=xppdata.opt(strcmp({xppdata.opt(:).name},'meth')).value;
+    xppmethod=xppdata.opt(contains({xppdata.opt(:).name},'meth')).value;
     if xppdata.nWiener>0
         methodHint=['Wiener variables detected. Use ode_euler'];
 %     elseif ~isempty(xppdata.opt.method)

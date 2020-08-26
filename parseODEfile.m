@@ -89,8 +89,8 @@ fixed=struct('name',{},'formula',{},'formulaToken',{},'tokenType',{},'tokenIx',{
 func=struct('name',{},'full_arglist',{},'arg_names',{},'formula',{},'formulaToken',{},'tokenType',{},'tokenIx',{});
 aux=struct('name',{},'formula',{},'formulaToken',{},'tokenType',{},'tokenIx',{});
 wiener=struct('name',{});
-% XPPopt=setXPPopt();
-opt=struct('name',{},'value',{});
+opt=setXPPopt();
+% opt=struct('name',{},'value',{});
 comment=struct('text',{});
 
 userNames={}; %set of all user defined names found
@@ -226,9 +226,9 @@ while ~file_done
         if strcmpi(token(1),'@')
             [parsed, numparsed] = ParseLine(rest,2,lineCount);
             for i=1:numparsed
-%                 XPPopt=setXPPopt(XPPopt,parsed(i).name, parsed(i).num);
-                opt(end+1).name=parsed(i).name;
-                opt(end).value=parsed(i).num;
+                opt=setXPPopt(opt,parsed(i).name, parsed(i).num);
+%                 opt(end+1).name=parsed(i).name;
+%                 opt(end).value=parsed(i).num;
             end
             
             continue
@@ -651,7 +651,7 @@ xppdata.nWiener=nWiener;
 xppdata.WienerNames={wiener(:).name};
 
 xppdata.nOpt=nOpt;
-xppdata.optNames={opt(:).name};
+xppdata.optNames=fieldnames(opt);
 % xppdata.optVals=[opt(:).value]; %
 
 %if we got to the end, then all formulas are valid!

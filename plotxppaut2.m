@@ -64,7 +64,7 @@ else
         tLines = fgets(fid);
         numCols = numel(strfind(tLines,delimiter)) + 1;
 
-        data = fscanf(fid,'%f',[inf,numCols]); %in Xpp version 8 - col 6 stores type of Two-par curves
+        data = fscanf(fid,'%f',[numCols,inf])'; %in Xpp version 8 - col 6 stores type of Two-par curves
         fclose(fid);
     else
         error(['Could not open file: ' arg1 ])

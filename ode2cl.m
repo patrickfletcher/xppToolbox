@@ -172,8 +172,8 @@ end
 % end
 
 %main body of RHS file
-output_file{end+1}=['void getRHS(realtype t, realtype ' ...
-    stateName '[], realtype ' paramName '[], realtype ' slopeName '[], realtype ' auxName '[], realtype ' wienerName '[]) {'];
+output_file{end+1}=['void getRHS(const realtype t, const realtype ' ...
+    stateName '[], const realtype ' paramName '[], realtype ' slopeName '[], realtype ' auxName '[], const realtype ' wienerName '[]) {'];
 
 for i=1:xppdata.nFixed
     
@@ -282,9 +282,9 @@ output_file{end+1}='';
                         tok='fmod';
                         
                     case 'pi'
-                        if strcmpi(precision,'single')
+                        if clSinglePrecision
                             tok='M_PI_F';
-                        elseif strcmpi(precision,'double')
+                        else
                             tok='M_PI';
                         end
                         
@@ -436,7 +436,12 @@ for j=1:nPow
         exponEndIx=thisPowIx+1;
     end
     
-    tokens={tokens{1:baseStartIx-1},'pow','(', base{:}, ',', expon{:}, ')', tokens{exponEndIx+1:end} };
+    if mod(expon{1},1)==0
+        powfun='pown';
+    else
+        powfun='pow';
+    end
+    tokens={tokens{1:baseStartIx-1},powfun,'(', base{:}, ',', expon{:}, ')', tokens{exponEndIx+1:end} };
     tokenType=[tokenType(1:baseStartIx-1),1,1,baseType,1,exponType,1,tokenType(exponEndIx+1:end)];
     tokenIx=[tokenIx(1:baseStartIx-1),0,0,baseTokIx,0,exponTokIx,0,tokenIx(exponEndIx+1:end)];
 end
