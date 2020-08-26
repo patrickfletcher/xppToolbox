@@ -436,7 +436,12 @@ for j=1:nPow
         exponEndIx=thisPowIx+1;
     end
     
-    tokens={tokens{1:baseStartIx-1},'pow','(', base{:}, ',', expon{:}, ')', tokens{exponEndIx+1:end} };
+    if mod(expon{1},1)==0
+        powfun='pown';
+    else
+        powfun='pow';
+    end
+    tokens={tokens{1:baseStartIx-1},powfun,'(', base{:}, ',', expon{:}, ')', tokens{exponEndIx+1:end} };
     tokenType=[tokenType(1:baseStartIx-1),1,1,baseType,1,exponType,1,tokenType(exponEndIx+1:end)];
     tokenIx=[tokenIx(1:baseStartIx-1),0,0,baseTokIx,0,exponTokIx,0,tokenIx(exponEndIx+1:end)];
 end
