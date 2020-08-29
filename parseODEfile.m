@@ -685,120 +685,118 @@ disp('')
         %tokens, their types, and the index into list of all found elements
         %of that type.
         
+        %types:
         %0=number, 1=simplemath, 2=mathname, 3=par, 4=fixed, 5=var,
         %6=function, 7=function argument, 8=wiener
         
+        %ix is index into the array of given type
+        
         if ~exist('arglist','var'), arglist={};end
+        
+        full_formula=formula; %for error message, if needed
+        formula = formula(isspace(formula)==0); % get rid of whitespace
+        
+        %regex codes:
+        real_in = '\d+';
+        real_dn = '(\d+\.\d*|\d*\.\d+)';
+        real_sn = '(\d*\.?\d+[Ee][+\-]?\d+|\d+\.?\d*[Ee][+\-]?\d+)';
+        real_num = ['(', real_sn, '|', real_dn, '|', real_in, ')']; %-? I let the unary "-" fall through to math ops...
+        word = '[a-zA-Z]+\w*';
+        ops = '[()^*/+-<>]';
+        
+        %tokenize
+        tokens = regexp(formula,[real_num,'|',word,'|',ops],'match');
         
         %parentheses check
         numLeftParenth=nnz(formula=='(');
         numRightParenth=nnz(formula==')');
         if numLeftParenth~=numRightParenth
-            disp(formula)
+            disp([name,formula])
             error('Parentheses don''t match in the formula above');
         end
         
-        tokens={};
-        types=[];
-        ix=[]; %index into the structure given by type. zero if n/a
+        types=zeros(size(tokens));
+        ix=zeros(size(tokens));
         
-        full_formula=formula; %for error message, if needed
-        formula = formula(isspace(formula)==0); % get rid of whitespace
-        
-        endofline = false;
-        j=1;
-        nLine=length(formula);
         %read the line and parse out all tokens
-        while ~endofline
+        for j=1:length(tokens)
             
-            if j>nLine
-                endofline=true;
-                continue
-            end
-            
-            tok=formula(j);
-            if isNumericLiteral(tok) %accumulate consecutive numbers: prefix '-' in -sin(t) falls through to math
-                while j<nLine && isNumericLiteral(formula(j+1))
-                    tok=[tok, formula(j+1)];
-                    j=j+1;
-                end
-                tokens{end+1}=str2double(tok); %converts string to a double
-                types(end+1)=0;
-                ix(end+1)=0;
-                j=j+1;
+            tok = tokens{j};
+            %check the token type and if applicable find its index
+            if isNumericLiteral(tok) 
+                tokens{j}=str2double(tokens{j}); %convert string to a double
+                types(j)=0;
                 
+            %is the token a math operation?
             elseif ismember(tok,SimpleMathChars) %one of (,),-,+,*,/,^,<,>
-                tokens{end+1}=tok;
-                types(end+1)=1;
-                ix(end+1)=0;
-                j=j+1;
+                types(j)=1;
                 
-            elseif regexpi(tok,'[a-z]')
-                
-                %accumulate consecutive letters, allowing numeric and _ after the first one
-                while j<nLine && ~isempty(regexpi(formula(j+1),'[a-z_0-9]'))
-                    tok=[tok, formula(j+1)];
-                    j=j+1;
-                end
-                
-                tokens{end+1}=tok;
-                j=j+1;
-                
-                [isTrue,thisIx]=ismember(tok,{num(:).name});
-                if isTrue
-                    types(end+1)=0;
-                    ix(end+1)=thisIx;
-                    continue;
-                end
-                    
+            elseif regexp(tok,word)
+                %is the word a reserved name? (includes math functions)
                 [isTrue,thisIx]=ismember(tok,ReservedNames);
                 if isTrue
-                    types(end+1)=2;
-                    ix(end+1)=thisIx;
+                    types(j)=2;
+                    ix(j)=thisIx;
+                    continue; %skip to next token. Alt: check all to ensure no re-use?
+                end
+                
+                %is the word a named constant?
+                [isTrue,thisIx]=ismember(tok,{num(:).name});
+                if isTrue
+                    types(j)=0;
+                    ix(j)=thisIx;
                     continue;
                 end
-                    
+                   
+                %is the word a named parameter
                 [isTrue,thisIx]=ismember(tok,{par(:).name});
                 if isTrue
-                    types(end+1)=3;
-                    ix(end+1)=thisIx;
+                    types(j)=3;
+                    ix(j)=thisIx;
                     continue;
                 end
                       
+                %is the word a named formula?
                 [isTrue,thisIx]=ismember(tok,{fixed(:).name});
                 if isTrue
-                    types(end+1)=4;
-                    ix(end+1)=thisIx;
+                    types(j)=4;
+                    ix(j)=thisIx;
                     continue;
                 end
 
+                %is the word a named variable
                 [isTrue,thisIx]=ismember(tok,{var(:).name});
                 if isTrue
-                    types(end+1)=5;
-                    ix(end+1)=thisIx;
+                    types(j)=5;
+                    ix(j)=thisIx;
                     continue;
                 end
 
+                %is the word a named function?
                 [isTrue,thisIx]=ismember(tok,{func(:).name});
                 if isTrue
-                    types(end+1)=6;
-                    ix(end+1)=thisIx;
+                    types(j)=6;
+                    ix(j)=thisIx;
                     continue;
                 end
 
+                %is the word a named function argument?
                 [isTrue,thisIx]=ismember(tok,arglist);
                 if isTrue
-                    types(end+1)=7;
-                    ix(end+1)=thisIx;
+                    types(j)=7;
+                    ix(j)=thisIx;
                     continue;
                 end
 
+                %is the word a named Wiener variable?
                 [isTrue,thisIx]=ismember(tok,{wiener(:).name});
                 if isTrue
-                    types(end+1)=8;
-                    ix(end+1)=thisIx;
+                    types(j)=8;
+                    ix(j)=thisIx;
                     continue;
                 end
+                
+                %no other cases are defined yet
             else
                 %if we get this far, the name is not one we've found yet.
                 disp(['---> ' tok ' in line ' name '=' full_formula ]);
@@ -920,39 +918,21 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function result = isNumericLiteral(data)
+function result = isNumericLiteral(str)
 % parameter `data` is a string
-result = false;
-pointCount = 0;
-num = [char(48:57),'.','-','e','E'];
-for j=1:length(data)
-    if data(j) == '.'
-        pointCount = pointCount + 1;
-        if pointCount > 1
-            return % false
-        end
-    end
-    if ~ismember(data(j),num)
-        return % false
-    end
-    
-    % '-' can be prefix (neg #) or after e (1e-2)
-    if data(j)=='-'
-        if j==length(data) %'-' or '21-' are not num
-            return %false
-        elseif j>1 && data(j-1)~='e' && data(j-1)~='E'
-            return %false
-        end
-    end
-    if data(j)=='e' || data(j)=='E'
-        if j==1||j==length(data) %'e' is not allowed as first/last
-            return %false
-        end
-    end
-end
+str = string(str);
 
-result = true; % can only get here if all chars were numeric
-return
+real_in = '\d+';
+real_dn = '(\d+\.\d*|\d*\.\d+)';
+real_sn = '(\d*\.?\d+[Ee][+\-]?\d+|\d+\.?\d*[Ee][+\-]?\d+)';
+real_num = ['-?(', real_sn, '|', real_dn, '|', real_in, ')']; 
+
+match = regexp(str,real_num,'match');
+
+result = false;
+if match == str
+    result = true;
+end
 end
 
 
@@ -1023,7 +1003,7 @@ SpecialXPPSyntax={'del_shft',...
 
 RelationalOperations={'|', '>', '<', '==', '>=', '<=', '!=', 'not','&'}; %what about double &&, ||
 
-SimpleMathChars = {'+', '-', '/', '*', '^','(',')',','};
+SimpleMathChars = {'(',')','^','*','/','+','-',','}; %comma for function arg separator
 
 ReservedNames=[ReservedXPP, RelationalOperations];
 end
