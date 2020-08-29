@@ -61,7 +61,13 @@ if ~exist('clSinglePrecision','var')
     clSinglePrecision=true;
 end
 
-output_file=BuildOutputFile(xppdata,clSinglePrecision);
+%TODO - proper interface for this!!!! ~exist('useNativeOps','var') && 
+% useNativeOps = false;
+% if clSinglePrecision
+    useNativeOps=false;
+% end
+
+output_file=BuildOutputFile(xppdata,clSinglePrecision,useNativeOps);
 lineCount=length(output_file);
 
 %delete a previous version - silently destroys any previous version!
@@ -98,7 +104,7 @@ xppdata.clRHSfilename=destinationFile;
 end
 
 
-function output_file=BuildOutputFile(xppdata,clSinglePrecision)
+function output_file=BuildOutputFile(xppdata,clSinglePrecision, useNativeOps)
 
 if clSinglePrecision
     numFormat='%0.7f'; %7 digits, single precision floating point
@@ -217,10 +223,9 @@ output_file{end+1}='';
 
     function thisFormula=buildFormula(tokens, tokenType, tokenIx, thisfunc)
         
-        %TODO: discover powers with integer exponents, convert to intPower(a,b)
-        
         %convert "a^b" to "pow(a,b)" - find a(:),^,b(:) then replace with
         %{'pow' '(' a(:) ',' b(:) ')'}
+        %handles "a^n" where n is integer, uses pown. 
         [tokens,tokenType,tokenIx]=convertPowers(tokens,tokenType,tokenIx);
         
         %functions of form: name(arg1,arg2,...,arg3) can be left as is, and the
@@ -250,7 +255,7 @@ output_file{end+1}='';
                     tok=[tok,'f'];
                 end
                 
-                tok=['(' tok ')'];
+                tok=['(' tok ')']; %for safety
                 
             elseif tokenType(j)==1 %simple math
                 
@@ -265,6 +270,9 @@ output_file{end+1}='';
                         %             case 'heav' %helper function named heav is defined
                         %             tok='step';
                         
+                    case {'exp','exp2','exp10','log','log2','log10',...
+                          'sin','cos','tan','sqrt','rsqrt','powr'}
+                        if useNativeOps, tok=['native_',tok]; end
                         
                     case 'flr'
                         tok='floor';
