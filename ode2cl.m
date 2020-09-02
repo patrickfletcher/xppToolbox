@@ -251,11 +251,11 @@ output_file{end+1}='';
                 tok=tok(1:find(tok~='0',1,'last'));
                 tok=[tok,'0'];
                 
-                if clSinglePrecision %add an f to indicate single precision
-                    tok=[tok,'f'];
-                end
+%                 if clSinglePrecision %add an f to indicate single precision
+%                     tok=[tok,'f'];
+%                 end
                 
-                tok=['(' tok ')']; %for safety
+                tok=['RCONST(' tok ')'];
                 
             elseif tokenType(j)==1 %simple math
                 
