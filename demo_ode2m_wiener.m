@@ -1,9 +1,12 @@
-% script demonstrating basic usage of ode2m on an ODE file
+% script demonstrating usage of ode2m and ode_euler to solve a system with
+% Wiener variables
+
 clear
 
-odefilename='lactotroph.ode';
+odefilename='lactotroph_noise.ode';
 
 [mFunctionName, xppdata]=ode2m(odefilename);
+
 %lists of parameter, variable, and aux variable names:
 parNames=xppdata.parNames; 
 varNames=xppdata.varNames;
@@ -22,18 +25,10 @@ dt=xppdata.opt.dt;
 total=xppdata.opt.total;
 
 %% call matlab solver
-%define the RHS anonymous function in matlab - must be done *after*
-%changing any parameters of interest. The anonymous function will store the
-%values of p as they are once reaching this line of code.
-odefun=eval(['@(t,y) ' mFunctionName '(t,y,p)']);
-[t,y]=ode45(odefun,[0,total],y0);
-
-%compute the auxiliary variables from the solution values
-aux=zeros(length(t),xppdata.nAux);
-for i=1:length(t)
-    [~,tmp]=odefun(t(i),y(i,:));
-    aux(i,:)=tmp';
-end
+%define the RHS anonymous function in matlab - must be done *after* changing any parameters of interest
+odefun=eval(['@(t,y,w) ' mFunctionName '(t,y,w,p)']);
+[t,y,dy,aux,w]=ode_euler(odefun,[0,total],dt,y0,xppdata.nWiener);
+%w is the sequence of random normals used in the simulation
 
 % plot result
 figure(1)
