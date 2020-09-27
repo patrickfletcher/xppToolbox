@@ -25,6 +25,12 @@ n ff=0.01
 n alpha=0.0015
 n ks=0.4
 
+p sig=2
+wiener w
+inoise=sig*w
+
+#inoise=0
+
 c2=c*c
 
 minf=1/(1+exp((vm-v)/sm))
@@ -39,7 +45,7 @@ il=gl*(v-vl)
 
 vkdrive = v-vk
 
-itot=ica+ isk + ibk + ik + il
+itot=ica+ isk + ibk + ik + il +inoise
 
 v'= -itot/Cm
 n'= (ninf - n)/taun
@@ -47,12 +53,13 @@ f'= (finf - f)/taubk
 c' = -ff*(alpha*ica+kc*c)
 
 aux ica=ica
+aux inoise=inoise
 
 @ dt=0.5, total=3000
 
 @ maxstor=20000000, bounds=10000000
 @ xp=t, yp=v
 @ xlo=0, xhi=5000, ylo=-75, yhi=0
-@ method=5dp
+@ method=Euler
 @ bell=0
 done
