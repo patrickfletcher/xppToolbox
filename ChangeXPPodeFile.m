@@ -63,12 +63,12 @@ while ~parsDone
         fclose(fid);
         return
     end
-    [token rest] = strtok(fline);
+    [token, rest] = strtok(fline);
     isParType = strcmp(token, 'par') | strcmp(token, 'p');
     isICType = strcmp(token, 'init') | strcmp(token, 'i');
-    if isParType | isICType
-        [parsed numparsed] = ParseParLine(rest);
-        if numparsed == 0 || parsed(numparsed).num == NaN
+    if isParType || isICType
+        [parsed, numparsed] = ParseParLine(rest);
+        if numparsed == 0 || isnan(parsed(numparsed).num)
             disp(' Problem parsing numerical value of parameter / initial condition in ODE file. Cannot continue')
             fclose(fid);
             return
@@ -81,21 +81,21 @@ while ~parsDone
             typeStr = 'ic';
         end
         for i=1:numparsed
-            [ispres ix] = ismember(parsed(i).name, parnames);
+            [ispres, ix] = ismember(parsed(i).name, parnames);
             if ispres % then a par to be changed has been found
-                if (strcmp(parset(ix).type,'PAR') & ~isParType) | (strcmp(parset(ix).type,'IC') & isParType)
+                if (strcmp(parset(ix).type,'PAR') && ~isParType) || (strcmp(parset(ix).type,'IC') && isParType)
                     fprintf(' Found %s `%s` that didn`t correspond to specified type %s\n',typeStr,parset(ix).name,parset(ix).type)
                     fclose(fid);
                     return
                 end
                 foundOccurrence(ix) = 1;
-                if numparsed==1 | i==numparsed
+                if numparsed==1 || i==numparsed
                     flineNew = [ flineNew, parsed(i).name '=' num2str(parset(ix).val)  ];
                 else
                     flineNew = [ flineNew, parsed(i).name '=' num2str(parset(ix).val) ', ' ];
                 end
             else
-                if numparsed==1 | i==numparsed
+                if numparsed==1 || i==numparsed
                     flineNew = [ flineNew, parsed(i).name '=' num2str(parsed(i).num)  ];
                 else
                     flineNew = [ flineNew, parsed(i).name '=' num2str(parsed(i).num) ',' ];
@@ -150,18 +150,20 @@ fline = strrep(fline,',',' '); % convert , to space
 numparsed = 0;
 endofline = false;
 while ~endofline
-    [nameStr restStr] = strtok(fline);
+    [nameStr, restStr] = strtok(fline);
     if isempty(nameStr)
         endofline = true;
         continue
     end
     numparsed = numparsed + 1;
-    [numStr restStr] = strtok(restStr);
-    if isempty(numStr) | isempty(nameStr)
+    [numStr, restStr] = strtok(restStr);
+    if isempty(numStr) || isempty(nameStr)
         disp('Param parse error: Parameter name or value missing!')
         parsed = parseddef;
         return
     end
+    numStr=strtok(numStr,'['); %in case of '[]' notation for ranges
+    if endsWith(restStr,']'), restStr=''; end
     if ~isNum(numStr(isspace(numStr)==0))
         disp('Param parse error: Parameter value not a number!')
         parsed = parseddef;
