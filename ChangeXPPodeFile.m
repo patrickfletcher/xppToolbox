@@ -98,7 +98,7 @@ while ~parsDone
                 if numparsed==1 || i==numparsed
                     flineNew = [ flineNew, parsed(i).name '=' num2str(parsed(i).num)  ];
                 else
-                    flineNew = [ flineNew, parsed(i).name '=' num2str(parsed(i).num) ',' ];
+                    flineNew = [ flineNew, parsed(i).name '=' num2str(parsed(i).num) ', ' ];
                 end
             end
         end
@@ -144,7 +144,8 @@ return
 function [parsed, numparsed] = ParseParLine(full_line)
 parseddef.num = NaN;
 parseddef.name = '';
-fline = full_line(isspace(full_line)==0); % get rid of whitespace
+fline = lower(full_line);
+fline = fline(isspace(fline)==0); % get rid of whitespace
 fline = strrep(fline,'=',' '); % convert = to space
 fline = strrep(fline,',',' '); % convert , to space
 numparsed = 0;
