@@ -13,7 +13,7 @@ A parser for XPP files, and code generation tools. `parseODEfile` reads an ODE f
 
 * Matlab m-file or mex-file versions of the ODE system. Use `ode2m` or `ode2mex`
 * OpenCL version that runs with clODE (link to repo pending). Use `ode2cl`
-* XML file compatible with [VFGEN](http://www.warrenweckesser.net/vfgen/). Use `ode2vfgen`
+* XML file compatible with [VFGEN](https://warrenweckesser.github.io/vfgen/). Use `ode2vfgen`
 * VCML file compatible with the ODE mode of [Virtual Cell](http://vcell.org/). Use `ode2vcml`
 
 These tools can be used alone, or via the `xppConverter` convenience routine. NOTE: several features that XPPAUT offers are supported but not all. You'll get an error message for keywords that haven't yet been implemented - let me know if your favorite one is missing!
@@ -22,7 +22,7 @@ A novel syntax can be used in the ODE file to specify a range of values for a pa
 
 An Euler method solver (`ode_euler`) is also included that allows solving ODEs with weiner variables in Matlab. See `demo_ode2m` for an example.
 
-Also included is `package4XPP`, which easy packaging of parameter and initial condition vectors for writing back to ODE files using `ChangeXPPodeFile` and `ChangeXPPsetFile` from [XPP-Matlab](http://www2.gsu.edu/~matrhc/XPP-Matlab.html) by Rob Clewley
+Also included is `package4XPP`, which allows easy packaging of parameter and initial condition vectors for writing back to ODE files using `ChangeXPPodeFile` and `ChangeXPPsetFile` from [XPP-Matlab](https://github.com/robclewley/xpp-matlab) by Rob Clewley
 
 ## 2. Plotting XPP bifurcation diagrams and nullclines
 
