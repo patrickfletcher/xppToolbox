@@ -64,6 +64,10 @@ while ~parsDone
         return
     end
     [token, rest] = strtok(fline);
+    if contains(token, '(0)')
+        rest=strrep(token,'(0)','');
+        token='init';
+    end
     isParType = strcmp(token, 'par') | strcmp(token, 'p');
     isICType = strcmp(token, 'init') | strcmp(token, 'i');
     if isParType || isICType
