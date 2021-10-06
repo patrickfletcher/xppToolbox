@@ -1,4 +1,10 @@
-function odewriter(srcfilename, destinationFile, sortmethod)
+function odewriter(src, destfilename, options)
+arguments
+    src
+    destfilename=[]
+    options.sortmethod='none'
+    options.do_ranges=false
+end
 % read ode write new ode (with options for sorting pars/vars/fixed/etc)
 
 %parser already re-orders fixed quantities so they are always defined
@@ -10,29 +16,32 @@ function odewriter(srcfilename, destinationFile, sortmethod)
 fileExtension='ode';
 
 % input checking
-if nargin==0 || isempty(srcfilename)
+if nargin==0 || isempty(src)
     [name,path]=uigetfile('.ode','Select an ODE file');
-    srcfilename=fullfile(path,name);
+    src=fullfile(path,name);
 end
 
 % Extract info from the ODE file
-xppdata=parseODEfile(srcfilename);
-
-%Build the destination filename
-if ~exist('destinationFile','var')||isempty(destinationFile)
-    %     destinationFile=xppdata.name;
-    
-    destinationFile=uiputfile('*.ode','New file name');
+if isstruct(src)
+    xppdata=src;
+else
+    xppdata=parseODEfile(src);
 end
 
-destinationFile=[destinationFile '.' fileExtension];
+%Build the destination filename
+if isempty(destfilename)
+    %     destinationFile=xppdata.name;
+    destfilename=uiputfile('*.ode','New file name');
+end
+
+destfilename=[destfilename '.' fileExtension];
 %end build destination filename
 
-output_file=BuildOutputFile(xppdata,sortmethod);
+output_file=BuildOutputFile(xppdata,options.sortmethod, options.do_ranges);
 lineCount=length(output_file);
 
 %delete a previous version - silently destroys any previous version!
-fullPath=[pwd filesep destinationFile];
+fullPath=[pwd filesep destfilename];
 if exist(fullPath,'file')==2
     delete(fullPath)
 end
@@ -65,7 +74,7 @@ return
 
 end
 
-function output_file=BuildOutputFile(xppdata,sortmethod)
+function output_file=BuildOutputFile(xppdata,sortmethod, do_ranges)
 
 % build the output as a cell array containing each line.
 par=xppdata.par;
@@ -96,7 +105,11 @@ if xppdata.nPar>0
     output_file{end+1}='#Parameters';
     par=sortNames(par,sortmethod);
     for i=1:xppdata.nPar
-        output_file{end+1}=['par ' par(i).name '=' num2str(par(i).value)];
+        thisline = ['par ' par(i).name '=' num2str(par(i).value)];
+        if do_ranges
+            thisline=[thisline,'[',num2str(par(i).lb),',',num2str(par(i).ub),']'];
+        end
+        output_file{end+1}=thisline;
     end
 end
 
@@ -128,7 +141,11 @@ if xppdata.nVar>0
     output_file{end+1}='';
     output_file{end+1}='#Initial conditions';
     for i=1:xppdata.nVar
-        output_file{end+1}=[var(i).name '(0)=' num2str(var(i).value)];
+        thisline = ['init ' var(i).name '=' num2str(var(i).value)];
+        if do_ranges
+            thisline=[thisline,'[',num2str(var(i).lb),',',num2str(var(i).ub),']'];
+        end
+        output_file{end+1}=thisline;
     end
     
     %State Variables
@@ -150,14 +167,14 @@ if xppdata.nAux>0
 end
 
 %options
-if xppdata.nOpt>0
-    output_file{end+1}='';
-    output_file{end+1}='#Options';
-    opt=sortNames(opt,sortmethod);
-    for i=1:xppdata.nOpt
-        output_file{end+1}=['@ ' opt(i).name '=' opt(i).value];
-    end
-end
+% if xppdata.nOpt>0
+%     output_file{end+1}='';
+%     output_file{end+1}='#Options';
+%     opt=sortNames(opt,sortmethod);
+%     for i=1:xppdata.nOpt
+%         output_file{end+1}=['@ ' opt(i).name '=' opt(i).value];
+%     end
+% end
 
 output_file{end+1}='';
 output_file{end+1}='done';
