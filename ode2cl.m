@@ -444,7 +444,7 @@ for j=1:nPow
         exponEndIx=thisPowIx+1;
     end
     
-    if mod(expon{1},1)==0
+    if isnumeric(expon{1}) && round(expon{1})==expon{1}
         powfun='pown';
     else
         powfun='pow';

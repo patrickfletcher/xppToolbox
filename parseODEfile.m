@@ -518,6 +518,7 @@ while ~file_done
     end
 end
 
+fclose(fid);
 
 % Extract location and type information of each of the pieces of the
 % formula and store them (for conversions to other languages). At the same
