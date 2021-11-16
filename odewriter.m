@@ -13,7 +13,6 @@ end
 % sortmethod='alpha';
 % sortmethod='none'; %xpp is sensitive to order of equations...
 
-fileExtension='ode';
 
 % input checking
 if nargin==0 || isempty(src)
@@ -30,18 +29,14 @@ end
 
 %Build the destination filename
 if isempty(destfilename)
-    %     destinationFile=xppdata.name;
     destfilename=uiputfile('*.ode','New file name');
 end
-
-destfilename=[destfilename '.' fileExtension];
-%end build destination filename
 
 output_file=BuildOutputFile(xppdata,options.sortmethod, options.do_ranges);
 lineCount=length(output_file);
 
 %delete a previous version - silently destroys any previous version!
-fullPath=[pwd filesep destfilename];
+fullPath=fullfile(pwd,destfilename+".ode");
 if exist(fullPath,'file')==2
     delete(fullPath)
 end
@@ -83,11 +78,11 @@ var=xppdata.var;
 fixed=xppdata.fixed;
 func=xppdata.func;
 aux=xppdata.aux;
-opt=xppdata.opt;
+opt=xppdata.opt.allopt;
 
 
 output_file={};
-output_file{end+1}=['# ',xppdata.name];
+output_file{end+1}="# "+xppdata.name;
 output_file{end+1}='';
 
 %constants
@@ -167,14 +162,14 @@ if xppdata.nAux>0
 end
 
 %options
-% if xppdata.nOpt>0
-%     output_file{end+1}='';
-%     output_file{end+1}='#Options';
-%     opt=sortNames(opt,sortmethod);
-%     for i=1:xppdata.nOpt
-%         output_file{end+1}=['@ ' opt(i).name '=' opt(i).value];
-%     end
-% end
+if xppdata.nOpt>0
+    output_file{end+1}='';
+    output_file{end+1}='#Options';
+    opt=sortNames(opt,sortmethod);
+    for i=1:xppdata.nOpt
+        output_file{end+1}=['@ ' opt(i).name '=' opt(i).value];
+    end
+end
 
 output_file{end+1}='';
 output_file{end+1}='done';
@@ -184,7 +179,7 @@ end
 function mystruct=sortNames(mystruct,sortmethod)
 switch sortmethod
     case 'alpha'
-        [~,ixs]=sort({mystruct(:).name});
+        [~,ixs]=natsort({mystruct(:).name});
     otherwise
         ixs=1:numel(mystruct);
 end
