@@ -1,4 +1,7 @@
 function xppdata=parseODEfile(filename)
+arguments
+    filename=[]
+end
 %reads an xpp file, storing all information found. This version also
 %accepts non-XPP range syntax introduced by Patrick Fletcher
 %
@@ -53,21 +56,26 @@ function xppdata=parseODEfile(filename)
 % Input check
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%if no filename was supplied, get one
-if ~exist('filename','var')||isempty(filename)
+
+if ~isempty(filename)
+    % input file checking
+    if ~endsWith(filename,'.ode')
+        warning(' Problem with filename: must end in .ode')
+        filename=[];
+    end
+    if exist(filename,'file') ~= 2
+        warning(' Problem with filename: file does not exist in specified path')
+        filename=[];
+    end
+end
+
+%if no filename was supplied or the input filename was bad, get a new one
+if isempty(filename)
     [name,path]=uigetfile('.ode','Select an ODE file');
     if ~ischar(name)
         error('File selection canceled, quitting...')
     end
     filename=fullfile(path,name);
-end
-
-% input file checking
-if ~strcmp('.ode',filename(end-3:end))
-    error(' Problem with filename: must end in .ode')
-end
-if exist(filename,'file') ~= 2
-    error(' Problem with filename: file does not exist in specified path')
 end
 
 %try opening the file
@@ -535,7 +543,7 @@ nFixed=length(fixed);
 nFunc=length(func);
 nAux=length(aux);
 nWiener=length(wiener);
-nOpt=length(opt);
+nOpt=length(opt.allopt);
 
 for i=1:nPar
     if isempty(par(i).lb)
@@ -890,6 +898,9 @@ function [parsed, numparsed] = ParseLine(full_line, type, lineCount)
         if rangeBrackets
             parsed(numparsed).lb = thislb;
             parsed(numparsed).ub = thisub;
+        else
+            parsed(numparsed).lb = numericValue-numericValue/2;
+            parsed(numparsed).ub = numericValue+numericValue/2;
         end
     end
 
@@ -1011,10 +1022,15 @@ end
 
 
 function XPPopt=setXPPopt(XPPopt,name,value)
+arguments
+    XPPopt=[]
+    name=[]
+    value=[]
+end
 % Need to figure out how sloppy XPP is with naming options, so I can
 % emulate that here. Perhaps only the first few letters are needed...
 
-if ~exist('XPPopt','var') || isempty(XPPopt)
+if isempty(XPPopt)
     XPPopt=struct('allopt',struct('name',{},'value',{}),...
         'method',[],...
         'dt',0.05, 'dtmin',1e-6, 'dtmax',10,'toler',1e-3,'atoler',1e-6,...
@@ -1031,7 +1047,11 @@ if ~exist('XPPopt','var') || isempty(XPPopt)
         'normTol',0.1); %<--mine, not xpp options!
 end
 
-if exist('name','var')&&~isempty(name)&&exist('value','var')&&~isempty(value)
+if ~isempty(name)&&~isempty(value)
+
+    XPPopt.allopt(end+1).name=name;
+    XPPopt.allopt(end).value=value;
+
     switch lower(name)
         case {'meth','method'}
             XPPopt.method=value;
@@ -1111,10 +1131,6 @@ if exist('name','var')&&~isempty(name)&&exist('value','var')&&~isempty(value)
             XPPopt.minIMI=str2double(value);
         case 'normtol'
             XPPopt.normTol=str2double(value);
-            
-        otherwise
-            XPPopt.allopt(end+1).name=name;
-            XPPopt.allopt(end).value=value;
     end
 end
 end
