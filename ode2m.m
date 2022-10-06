@@ -1,4 +1,10 @@
-function [destinationFile, xppdata]=ode2m(source, destinationFile,verbose)
+function [destinationFile, xppdata]=ode2m(source, destinationFile,options)
+arguments
+    source=[]
+    destinationFile=[]
+    options.verbose=true
+    options.vectorized=true
+end
 % code conversion from ODE file for XPP to a .m file that can be run with
 % MatLab. Calls parseODEfile, writes the ODE information to a .m file,
 % then packages the secondary parameters into a vector pars. Also produced
@@ -15,7 +21,9 @@ function [destinationFile, xppdata]=ode2m(source, destinationFile,verbose)
 %   destinationFile: specified output filename. if omitted, a default will be generated based on the
 %                    source filename
 %   verbose {true}/false - toggle display of information in the console
-%
+%   vectorized {true}/false - generates a function compatible with
+%                             "vectorized" option in Matlab ODE solvers
+%                             (internally, they use rows for variables)
 %
 % Outputs
 %   mFileName: string conatining the destination filename without extension
@@ -28,13 +36,13 @@ function [destinationFile, xppdata]=ode2m(source, destinationFile,verbose)
 %
 %
 
+
+
 %TO DO
 % - destination file overwriting behavior? now destroys any existing copy
 % - don't use symbolic toolbox heaviside!!
 
-if ~exist('verbose','var')
-    verbose=true;
-end
+verbose=options.verbose;
 
 fileExtension='m';
 
@@ -56,8 +64,10 @@ else %assume it is ivpStruct (TODO: errorchecking)
     xppdata=source;
 end
 
+xppdata.fun=eval("@(t,x)"+xppdata.name+"(t,x,xppdata.p0)");
+
 %Build the destination filename
-if ~exist('destinationFile','var')||isempty(destinationFile)
+if isempty(destinationFile)
     destinationFile=xppdata.name;
 else
     %destinationFile was provided. Extract just the filename without
@@ -67,7 +77,7 @@ else
     %check whether it exists, and ask if overwriting it is ok?
 end
 
-output_file=BuildOutputFile(xppdata,destinationFile);
+output_file=BuildOutputFile(xppdata,destinationFile,options);
 lineCount=length(output_file);
 
 %delete a previous version - silently destroys any previous version!
@@ -139,7 +149,7 @@ end
 
 end
 
-function output_file=BuildOutputFile(xppdata,destinationFile)
+function output_file=BuildOutputFile(xppdata,destinationFile,options)
 
 num=xppdata.num;
 var=xppdata.var;
@@ -164,14 +174,18 @@ slopeName='dx_';
 auxName='aux_';
 wienerName='w_';
 
-output_file={};
+
 if xppdata.nWiener==0
 output_file{1}=['function [' slopeName ', ' auxName ']=' destinationFile '(t,' stateName ',' paramName ')'];
 else
 output_file{1}=['function [' slopeName ', ' auxName ']=' destinationFile '(t,' stateName ',' wienerName ',' paramName ')'];
 end
-output_file{2}=[slopeName '=zeros(' num2str(xppdata.nVar) ',1);'];
-output_file{3}=[auxName '=zeros(' num2str(xppdata.nAux) ',1);'];
+
+%if vectorized, vars need to be rows
+output_file{end+1}='if any(size(x_)==1), x_=x_(:); end';
+output_file{end+1}=[slopeName '=zeros(' num2str(xppdata.nVar) ',size(x_,2));'];
+output_file{end+1}=[auxName '=zeros(' num2str(xppdata.nAux) ',size(x_,2));'];
+
 
 %put anonymous function definitions first
 for i=1:xppdata.nFunc
@@ -221,7 +235,7 @@ for i=1:xppdata.nVar
     
     thisFormula=buildFormula(tokens,tokenType,tokenIx);
     
-    output_file{end+1}=[slopeName '(' num2str(i) ',1)=' thisFormula ';'];
+    output_file{end+1}=[slopeName '(' num2str(i) ',:)=' thisFormula ';'];
 end
 
 for i=1:xppdata.nAux
@@ -232,7 +246,7 @@ for i=1:xppdata.nAux
     
     thisFormula=buildFormula(tokens,tokenType,tokenIx);
     
-    output_file{end+1}=[auxName '(' num2str(i) ',1)=' thisFormula ';'];
+    output_file{end+1}=[auxName '(' num2str(i) ',:)=' thisFormula ';'];
 end
 
 %Nested function
@@ -261,8 +275,15 @@ end
                 tok=['(' tok ')'];
                 
             elseif tokenType(j)==1 %simple math
-                
-                %do nothing.
+                %option to use vectorized ops 
+                % - also needs convention for column/row-based ordering of
+                % variables when provided as input (see tokentype=5)
+                if options.vectorized
+                    switch tok
+                        case {'*','/','^'}
+                            tok=['.',tok];
+                    end
+                end
                 
             elseif tokenType(j)==2 %reserved math words. Convert to matlab version
                 switch tok
@@ -311,7 +332,12 @@ end
                 %nothing to do
                 
             elseif tokenType(j)==5 %variable
-                tok=[stateName '(' num2str(tokenIx(j)) ')'];
+%                 if options.vectorized
+                    %convention: require row-wise vars like matlab odes
+                    tok=[stateName '(' num2str(tokenIx(j)) ',:)'];
+%                 else
+%                     tok=[stateName '(' num2str(tokenIx(j)) ')'];
+%                 end
                 
             elseif tokenType(j)==6 %function name
                 
