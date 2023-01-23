@@ -625,6 +625,34 @@ end
 
 
 %all checks successful: package the output
+
+%tables for convenience
+structs = {par, var, aux, num};
+tabs = {table(), table(), table(), table()};
+tabFields = ["name","value","lb","ub","formula"];
+for i = 1:length(structs)
+    thisStruct=structs{i};
+    thisTab = tabs{i};
+    if ~isempty(thisStruct)
+        for field = tabFields
+            if isfield(thisStruct, field)
+                if ischar(thisStruct(1).(field))
+                    vals=string({thisStruct(:).(field)});
+                else
+                    vals=[thisStruct(:).(field)];
+                end
+                thisTab.(field)=vals(:);
+            end
+        end
+    end
+    tabs{i} = thisTab;
+end
+xppdata.par_tab=tabs{1};
+xppdata.var_tab=tabs{2};
+xppdata.aux_tab=tabs{3};
+xppdata.num_tab=tabs{4};
+
+% compatibility:
 xppdata.par=par;
 xppdata.num=num;
 xppdata.var=var;
@@ -899,8 +927,10 @@ function [parsed, numparsed] = ParseLine(full_line, type, lineCount)
             parsed(numparsed).lb = thislb;
             parsed(numparsed).ub = thisub;
         else
-            parsed(numparsed).lb = numericValue-numericValue/2;
-            parsed(numparsed).ub = numericValue+numericValue/2;
+            parsed(numparsed).lb = numericValue;
+            parsed(numparsed).ub = numericValue;
+%             parsed(numparsed).lb = numericValue-numericValue/2;
+%             parsed(numparsed).ub = numericValue+numericValue/2;
         end
     end
 
