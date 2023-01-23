@@ -1,8 +1,10 @@
-function result=heaviside(x,useHalfMax)
-result=0;
-if ~exist('useHalfMax','var'), useHalfMax=false; end
-if x>0
-    result=1;
-elseif x==0 && useHalfMax
-    result=0.5;
+function result=heaviside(x, useHalfMax)
+arguments
+    x
+    useHalfMax=false
+end
+result=zeros(size(x));
+result(x>0)=1;
+if useHalfMax
+    result(x==0)=0.5;
 end
