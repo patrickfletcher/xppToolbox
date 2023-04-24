@@ -645,6 +645,7 @@ for i = 1:length(structs)
             end
         end
     end
+    thisTab.Properties.RowNames=thisTab.name;
     tabs{i} = thisTab;
 end
 xppdata.par_tab=tabs{1};
