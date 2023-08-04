@@ -56,7 +56,7 @@ if nargin==0 || isempty(source)
     source=fullfile(path,name);
 end
 
-if ischar(source) %filename input: parse it.
+if ischar(source)||isstring(source) %filename input: parse it.
     srcfilename=source;
     % Extract info from the ODE file
     xppdata=parseODEfile(srcfilename);
@@ -81,7 +81,8 @@ output_file=BuildOutputFile(xppdata,destinationFile,options);
 lineCount=length(output_file);
 
 %delete a previous version - silently destroys any previous version!
-fullPath=[pwd filesep destinationFile '.' fileExtension];
+% fullPath=[pwd filesep destinationFile '.' fileExtension];
+fullPath = fullfile(pwd,destinationFile+"."+fileExtension);
 if exist(fullPath,'file')==2
     delete(fullPath)
 end
@@ -174,6 +175,7 @@ slopeName='dx_';
 auxName='aux_';
 wienerName='w_';
 
+destinationFile=char(destinationFile);
 
 if xppdata.nWiener==0
 output_file{1}=['function [' slopeName ', ' auxName ']=' destinationFile '(t,' stateName ',' paramName ')'];
