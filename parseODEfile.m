@@ -627,8 +627,8 @@ end
 %all checks successful: package the output
 
 %tables for convenience
-structs = {par, var, aux, num};
-tabs = {table(), table(), table(), table()};
+structs = {par, var, aux, num, fixed};
+tabs = {table(), table(), table(), table(), table()};
 tabFields = ["name","value","lb","ub","formula"];
 for i = 1:length(structs)
     thisStruct=structs{i};
@@ -645,13 +645,16 @@ for i = 1:length(structs)
             end
         end
     end
-    thisTab.Properties.RowNames=thisTab.name;
+    if ismember("name",thisTab.Properties.VariableNames)
+        thisTab.Properties.RowNames=thisTab.name;
+    end
     tabs{i} = thisTab;
 end
 xppdata.par_tab=tabs{1};
 xppdata.var_tab=tabs{2};
 xppdata.aux_tab=tabs{3};
 xppdata.num_tab=tabs{4};
+xppdata.fixed_tab=tabs{5};
 
 % compatibility:
 xppdata.par=par;

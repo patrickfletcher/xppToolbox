@@ -35,7 +35,7 @@ if nargin==0 || isempty(source)
     source=fullfile(path,name);
 end
 
-if ischar(source) %filename input: parse it.
+if ischar(source)||isstring(source) %filename input: parse it.
     srcfilename=source;
     % Extract info from the ODE file
     xppdata=parseODEfile(srcfilename);
@@ -54,9 +54,6 @@ else
     %check whether it exists, and ask if overwriting it is ok?
 end
 
-%finalize by appending extension
-destinationFile=[destinationFile '.' fileExtension];
-
 if ~exist('clSinglePrecision','var')
     clSinglePrecision=true;
 end
@@ -71,7 +68,8 @@ output_file=BuildOutputFile(xppdata,clSinglePrecision,useNativeOps);
 lineCount=length(output_file);
 
 %delete a previous version - silently destroys any previous version!
-fullDestinationPath=[pwd filesep destinationFile];
+% fullDestinationPath=[pwd filesep destinationFile];
+fullDestinationPath = fullfile(pwd,destinationFile+"."+fileExtension);
 if exist(fullDestinationPath,'file')==2
     delete(fullDestinationPath)
 end
